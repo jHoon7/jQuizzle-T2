@@ -1,0 +1,1030 @@
+/* At the top of the file, update the CSS variables */
+:root {
+  /* Dark theme variables (default) */
+  --background-darker: #1a1a1a;
+  --background-dark: #2a2a2a;
+  --text-primary: #ffffff;
+  --text-secondary: #a0a0a0;
+  --primary-color: #646cff;
+  --primary-hover: #747bff;
+  --primary-rgb: 100, 108, 255;
+  --border-color: #3a3a3a;
+}
+
+/* Light theme variables */
+.light {
+  --background-darker: #f0f0f0;
+  --background-dark: #ffffff;
+  --text-primary: #1a1a1a;
+  --text-secondary: #666666;
+  --primary-color: #4a51cc;
+  --primary-hover: #5a62ff;
+  --primary-rgb: 74, 81, 204;
+  --border-color: #dddddd;
+  --highlight-color: rgba(0, 123, 255, 0.1);
+  --accent-color: #0056b3;
+  --accent-hover-color: #004494;
+}
+
+/* Add transition for smooth theme switching */
+.container {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Update the tooth logo color in light mode */
+.light .tooth-logo {
+  filter: brightness(0.8);
+}
+
+/* Update message bubble in light mode */
+.light .message-bubble {
+  background: var(--background-dark);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.light .message-bubble:after {
+  border-bottom-color: var(--background-dark);
+}
+
+/* Update bank items in light mode */
+.light .bank-item {
+  border: 1px solid var(--border-color);
+}
+
+/* Update empty state text in light mode */
+.light .empty-state::after {
+  color: rgba(0, 0, 0, 0.5);
+  text-shadow: none;
+}
+
+/* Update theme toggle hover in light mode */
+.light .theme-toggle:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 2rem;
+  text-align: center;
+  background-color: var(--background-darker);
+  position: relative;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: flex-start;
+  width: auto;
+  position: absolute;
+  top: 2rem;
+  left: 0;
+  padding-left: 1rem;
+}
+
+.large-button {
+  font-size: 1.2rem;
+  padding: 0.8rem 1.2rem;
+  min-width: 40%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin: 0;
+  border-radius: 8px;
+  border: 2px solid var(--primary-color);
+  background-color: var(--background-dark);
+  color: var(--text-primary);
+  text-align: left;
+  transition: all 0.25s ease;
+  width: fit-content;
+  min-width: 120px;
+  max-width: 200px;
+  box-sizing: border-box;
+  white-space: nowrap;
+  line-height: 1.2;
+  height: auto;
+}
+
+.large-button:hover {
+  background-color: var(--primary-color);
+  border-color: var(--primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.button-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.button-text {
+  flex: 0 1 auto;
+  white-space: nowrap;
+  padding-right: 0.5rem;
+}
+
+h1 {
+  color: var(--text-primary);
+  text-shadow: 0 0 10px var(--primary-color);
+  margin-bottom: 2rem;
+}
+
+p {
+  color: var(--text-secondary);
+  margin-bottom: 2rem;
+}
+
+.tooth-logo {
+  width: 120px;
+  height: 120px;
+  margin-bottom: 3rem;
+  filter: drop-shadow(0 0 10px var(--primary-color));
+  animation: float 3s ease-in-out infinite;
+  pointer-events: auto;
+  cursor: default;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.tooth-logo path {
+  stroke: var(--primary-color);
+}
+
+.import-options-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin: 2rem 0;
+  width: 100%;
+  max-width: 400px;
+}
+
+.import-option-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  width: 100%;
+  padding: 1.5rem;
+  background-color: var(--background-dark);
+  border: 2px solid var(--primary-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  font-size: 1.2rem;
+}
+
+.import-option-btn:hover {
+  background-color: var(--primary-color);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.import-icon {
+  font-size: 1.5rem;
+}
+
+.back-button {
+  padding: 0.5rem 1rem;
+  background: none;
+  border: 1px solid var(--primary-color);
+  color: var(--primary-color);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 80px;
+  text-align: center;
+}
+
+.back-button:hover {
+  background-color: var(--primary-color);
+  color: var(--background-darker);
+}
+
+.message-bubble {
+  position: relative;
+  background: var(--background-dark);
+  border: none;
+  border-radius: 12px;
+  padding: 0.8rem 1.2rem;
+  margin-top: 3rem;
+  margin-bottom: 2rem;
+  font-size: 1rem;
+  color: var(--text-primary);
+  opacity: 1;
+  transition: opacity 1s ease;
+}
+
+.message-bubble.fade-out {
+  opacity: 0;
+}
+
+/* Adjust the arrow position */
+.message-bubble:after {
+  content: '';
+  position: absolute;
+  top: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 15px solid var(--background-dark);
+}
+
+/* Remove the inner arrow since we don't have a border anymore */
+.message-bubble:before {
+  display: none;
+}
+
+.create-form {
+  width: 100%;
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin: 2rem 0;
+  position: relative;
+}
+
+/* Add a class to the answer choices input group */
+.answer-choices-group {
+  position: relative;
+  width: 100%;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.input-group label {
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  font-weight: bold;
+}
+
+.input-box {
+  width: 100%;
+  padding: 0.8rem;
+  border: 2px solid var(--primary-color);
+  border-radius: 8px;
+  background-color: var(--background-dark);
+  color: var(--text-primary);
+  font-size: 1rem;
+  resize: vertical;
+  min-height: 100px;
+  transition: opacity 0.3s ease, border-color 0.3s ease;
+}
+
+/* Add specific styling for explanation box if needed */
+.explanation-box {
+  min-height: 80px;  /* Slightly smaller than question/answer boxes */
+}
+
+.input-box:focus {
+  outline: none;
+  border-color: var(--primary-hover);
+  box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.2);
+}
+
+.input-box::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.6;
+}
+
+.input-box:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  border-color: var(--border-color);
+}
+
+/* Update name input styling */
+.name-input-group {
+  position: relative;
+  margin-bottom: 2rem;
+  width: 100%;
+  max-width: 800px;
+  height: 7rem; /* Increased to accommodate larger font */
+}
+
+.name-input {
+  min-height: unset;
+  height: 7rem; /* Increased from 5rem */
+  background: none;
+  border: none;
+  text-align: center;
+  font-size: 6.4rem; /* Significantly increased from 4.8rem */
+  font-weight: bold;
+  padding: 0 1rem;
+  color: var(--text-primary);
+  width: 100%;
+  transition: font-size 0.2s ease;
+  line-height: 1; /* Add this to help with vertical centering */
+}
+
+.name-input:focus {
+  outline: none;
+  border: none;
+  box-shadow: none;
+}
+
+/* Style the placeholder */
+.name-input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.3;  /* Make it subtle */
+}
+
+.create-dropdown-container {
+  position: relative;
+}
+
+.create-dropdown {
+  position: absolute;
+  left: 100%;
+  top: 0;
+  margin-left: 0.5rem;
+  background-color: var(--background-dark);
+  border: 2px solid var(--primary-color);
+  border-radius: 8px;
+  overflow: hidden;
+  z-index: 100;
+}
+
+.create-option {
+  display: block;
+  width: 100%;
+  padding: 0.8rem 1.6rem;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 1rem;
+  text-align: left;
+  transition: background-color 0.2s;
+}
+
+.create-option:hover {
+  background-color: var(--primary-color);
+}
+
+.create-option:not(:last-child) {
+  border-bottom: 1px solid var(--primary-color);
+}
+
+.create-options {
+  display: flex;
+  gap: 2rem;
+  margin: 2rem 0;
+}
+
+.create-type-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem;
+  background-color: var(--background-dark);
+  border: 2px solid var(--primary-color);
+  border-radius: 12px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  min-width: 150px;
+}
+
+.create-type-button .button-icon {
+  font-size: 2.5rem;
+}
+
+.create-type-button .button-text {
+  font-size: 1.2rem;
+  padding: 0;
+}
+
+.create-type-button:hover {
+  background-color: var(--primary-color);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.top-gum-container {
+  position: absolute;
+  bottom: 1rem;
+  left: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  width: 160px;
+}
+
+/* For <img> tag approach */
+.top-gum-logo {
+  content: url('./assets/top-gum-logo.svg');
+  width: 173px;
+  height: auto;
+  margin: 0;
+}
+
+.light .top-gum-logo {
+  content: url('./assets/top-gum-logo-light.svg');
+  width: 173px;
+  height: auto;
+}
+
+.top-gum-text {
+  color: #64B5F6;
+  font-size: 0.88rem;
+  font-weight: bold;
+  text-shadow: 0 0 5px rgba(100, 181, 246, 0.5);
+  white-space: nowrap;
+}
+
+.main-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 100%;
+  gap: 1rem;
+  padding: 2rem;
+}
+
+.left-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  flex: 1;
+  padding-top: 2rem;
+}
+
+.right-section {
+  display: flex;
+  flex-direction: column;
+  width: clamp(400px, 40%, 600px);
+  height: clamp(400px, 78vh, 900px);
+  background-color: var(--background-dark);
+  border: 2px solid var(--primary-color);
+  border-radius: 12px;
+  overflow: visible;
+  padding-bottom: 1rem;
+}
+
+.tabs {
+  display: flex;
+  background-color: var(--background-darker);
+  border-bottom: 2px solid var(--primary-color);
+  width: 100%;
+}
+
+.tab {
+  flex: 1;
+  padding: clamp(0.5rem, 2vh, 1rem) 0;
+  color: var(--text-primary);
+  background: none;
+  border: none;
+  border-right: 2px solid var(--primary-color);
+  cursor: pointer;
+  font-size: clamp(0.8rem, 1.5vw, 1rem);
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.tab:last-child {
+  border-right: none;
+}
+
+.tab.active {
+  background-color: var(--primary-color);
+  color: var(--background-darker);
+}
+
+.tab:hover:not(.active) {
+  background-color: rgba(100, 108, 255, 0.1);
+}
+
+.tab-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 1rem;
+  min-height: 0;
+}
+
+.tooth-button {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: default;
+  position: relative;
+  width: 120px;
+  height: 84px;
+  pointer-events: none;
+  outline: none;
+}
+
+/* Add these specific focus styles */
+.tooth-button:focus {
+  outline: none;
+  border: none;
+  box-shadow: none;
+}
+
+.tooth-button:focus-visible {
+  outline: none;
+}
+
+/* Remove any hover states */
+.tooth-button:hover,
+.tooth-logo:hover {
+  background: none;
+  cursor: default;
+}
+
+.bank-container {
+  flex: 1;
+  border: 2px dashed var(--border-color);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  height: auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.dragging-over {
+  border-color: var(--primary-color);
+  background-color: rgba(var(--primary-rgb), 0.1);
+}
+
+.bank-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 0;
+  font-size: clamp(0.8rem, 1.5vw, 1rem);
+  font-weight: bold;
+  border-bottom: 2px solid var(--border-color);
+  color: var(--text-primary);
+  background-color: var(--background-darker);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.sort-button {
+  flex: 1;
+  padding: clamp(0.5rem, 2vh, 1rem);
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: inherit;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.sort-button:first-child {
+  justify-content: flex-start;
+}
+
+.sort-button:last-child {
+  justify-content: flex-end;
+}
+
+.sort-button:hover {
+  background-color: rgba(var(--primary-rgb), 0.1);
+}
+
+.sort-button.active {
+  color: var(--primary-color);
+}
+
+.sort-arrow {
+  display: inline-block;
+  font-weight: bold;
+  color: var(--primary-color);
+}
+
+.bank-item {
+  display: flex;
+  justify-content: space-between;
+  padding: clamp(0.5rem, 1.5vh, 0.75rem) clamp(0.75rem, 2vw, 1rem);
+  border-radius: 4px;
+  background-color: var(--background-dark);
+  margin-bottom: clamp(0.25rem, 1vh, 0.5rem);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  font-size: clamp(0.8rem, 1.5vw, 1rem);
+  color: var(--text-primary);
+}
+
+/* Restore bank item left container and number styling */
+.bank-item-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.bank-item-number {
+  color: var(--primary-color);
+  font-weight: bold;
+  min-width: clamp(1.2rem, 2vw, 1.5rem);
+}
+
+/* Add a subtle scale effect on active */
+.bank-item:active {
+  transform: scale(0.98);
+}
+
+.bank-item:hover {
+  background-color: var(--background-darker);
+}
+
+/* Update light mode specific styles */
+.light .bank-item {
+  color: var(--text-primary);
+  background-color: var(--background-dark);
+}
+
+.light .bank-item:hover {
+  background-color: var(--background-darker);
+}
+
+/* Update selected state for both themes */
+.bank-item.selected {
+  background-color: var(--highlight-color);
+  border: 2px solid var(--accent-color);
+  color: var(--text-primary);
+}
+
+.empty-state {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 0;
+  position: relative;
+}
+
+.empty-state::after {
+  content: 'Drag + Drop';
+  position: absolute;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: clamp(0.9rem, 1.5vw, 1.2rem);
+  font-style: italic;
+  opacity: 0.6;
+  pointer-events: none;
+  text-shadow: 0 0 2px rgba(255, 255, 255, 0.2);
+}
+
+.empty-state.create-mode::after {
+  content: none;
+}
+
+.create-content {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem;
+  position: relative;
+}
+
+.back-button:hover {
+  background-color: var(--primary-color);
+  color: var(--background-darker);
+}
+
+.theme-toggle {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease;
+  z-index: 100;
+}
+
+.theme-toggle:hover {
+  transform: rotate(15deg);
+}
+
+/* Remove the default button styles */
+.theme-toggle:focus {
+  outline: none;
+}
+
+/* Optional: add a subtle background on hover */
+.theme-toggle:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Optional: Add specific light mode styling if needed */
+.light .bank-header {
+  border-bottom-color: var(--border-color);
+}
+
+/* Add styles for the enter hint tooltip */
+.enter-hint {
+  position: absolute;
+  bottom: -3.5rem;  /* Lowered from -2rem */
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--background-dark);
+  color: var(--text-secondary);
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  animation: fadeIn 0.3s ease;
+  border: 1px solid var(--border-color);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translate(-50%, -10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* Style the save button */
+.save-button {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.8rem 1.6rem;
+  background-color: var(--primary-color);
+  border: none;
+  border-radius: 8px;
+  color: var(--background-dark);
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.save-button:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.button-container {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.add-question-button {
+  width: clamp(40px, 5vw, 60px);
+  height: clamp(40px, 5vw, 60px);
+  aspect-ratio: 1;
+  border-radius: 8px;
+  background-color: #4CAF50;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin: 0;
+  transition: all 0.25s ease;
+  position: fixed; /* Change to fixed */
+  left: calc(50% + 150px); /* Position relative to center of screen */
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+}
+
+.plus-icon {
+  font-size: clamp(18px, 2.5vw, 24px);
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.light .plus-icon {
+  filter: brightness(0) invert(1) !important;
+}
+
+.add-question-button:hover {
+  background-color: #45a049;
+  transform: translateY(-50%) scale(1.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Add specific styling for create mode */
+.bank-items {
+  flex: 1;
+  padding: 1rem;
+  padding-top: 0;
+}
+
+/* Update bank-header for create mode */
+.create-content + .right-section .bank-header {
+  justify-content: center;
+  padding: 1rem;
+}
+
+/* Or alternatively, we can be more specific */
+.bank-header span {
+  flex: 1;
+  text-align: center;
+}
+
+/* Keep the sort buttons left/right aligned in main screen */
+.sort-button:first-child {
+  justify-content: flex-start;
+}
+
+.sort-button:last-child {
+  justify-content: flex-end;
+}
+
+/* Add these CSS variables to your existing light/dark theme variables */
+.dark {
+  --highlight-color: rgba(79, 70, 229, 0.2);
+  --accent-color: #4F46E5;
+  --accent-hover-color: #4338CA;
+}
+
+/* Add responsive styles for smaller screens */
+@media (max-width: 768px) {
+  .main-content {
+    flex-direction: column;
+    gap: 2rem;
+    padding: 1rem;
+  }
+
+  .right-section {
+    width: 100%;
+    max-width: 600px;
+    height: clamp(300px, 50vh, 600px);
+    margin: 0 auto;
+  }
+
+  .bank-container {
+    max-height: calc(100% - 100px);
+  }
+
+  .left-section {
+    padding-top: 1rem;
+  }
+
+  .add-question-button {
+    position: fixed;
+    right: 1rem;
+    left: auto;
+    bottom: 1rem;
+    top: auto;
+    transform: none;
+  }
+  
+  .plus-icon {
+    font-size: 18px;
+  }
+}
+
+/* Add responsive styles for very small screens */
+@media (max-width: 480px) {
+  .bank-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .bank-item-left {
+    width: 100%;
+  }
+}
+
+.questions-list {
+  width: 100%;
+  overflow-y: auto;
+  max-height: calc(100vh - 200px);
+}
+
+.question-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 10px;
+  margin: 5px;
+  background: var(--background-dark);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  color: var(--text-primary);
+}
+
+.question-item:hover {
+  background: var(--background-darker);
+}
+
+.question-item.selected {
+  background: var(--highlight-color);
+  border: 2px solid var(--accent-color);
+}
+
+.question-number {
+  margin-right: 10px;
+  min-width: 25px;
+}
+
+.question-preview {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Add these styles after the .action-buttons class */
+
+.edit-button, .remove-button {
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  min-width: 80px;
+}
+
+.edit-button {
+  background-color: var(--primary-color);
+  border: 1px solid var(--primary-color);
+  color: white;
+}
+
+.edit-button:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.remove-button {
+  background-color: #dc3545;
+  border: 1px solid #dc3545;
+  color: white;
+}
+
+.remove-button:hover {
+  background-color: #c82333;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.action-buttons {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  justify-content: center;
+}
