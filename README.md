@@ -1,8 +1,6 @@
 # jQuizzle-T2
 Major facelift from the previous quiz app with all the same functionality and more! 
 
-This version uses React in front and Javascript on the backend. 
+Converted from Python to React/Vite and JS. 
 
-Installer via Tauri 2.0 is also included as a lightweight and portable option! 
-
-Replit link for web access to come.
+Hosted via Vercel at: https://j-quizzle-t2.vercel.app/
