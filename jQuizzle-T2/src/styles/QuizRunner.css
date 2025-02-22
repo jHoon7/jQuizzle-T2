@@ -1,0 +1,114 @@
+.quiz-runner {
+  display: flex;
+  height: 100vh;
+  background: var(--background);
+  color: var(--text);
+}
+
+.question-nav {
+  width: 200px;
+  padding: 20px;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.nav-header {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.question-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
+}
+
+.question-number {
+  aspect-ratio: 1;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.2s;
+}
+
+.question-number.unanswered { background: var(--gray-500); }
+.question-number.answered { background: var(--blue-500); }
+.question-number.flagged { background: var(--yellow-500); }
+.question-number.flagged-answered { background: var(--purple-500); }
+.question-number.correct { background: var(--green-500); }
+.question-number.incorrect { background: var(--red-500); }
+
+.quiz-content {
+  flex: 1;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+}
+
+.timer {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  font-size: 1.2em;
+  font-weight: bold;
+}
+
+.question-container {
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.question-text {
+  font-size: 1.2em;
+  margin: 20px 0;
+}
+
+.options-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.option-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.option-label:hover {
+  background: var(--hover);
+}
+
+.navigation {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+.submit-button {
+  margin-top: auto;
+  padding: 15px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1.1em;
+  transition: all 0.2s;
+}
+
+.submit-button:hover {
+  background: var(--primary-dark);
+} 
