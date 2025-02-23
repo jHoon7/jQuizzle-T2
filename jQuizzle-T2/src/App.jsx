@@ -85,6 +85,8 @@ function App() {
   const answerImageInputRef = useRef(null)
   const explanationImageInputRef = useRef(null)
   const [showQuizRunner, setShowQuizRunner] = useState(false)
+  const fileInputRef = useRef(null)
+  const [currentQuizName, setCurrentQuizName] = useState('')
 
   const handleCreateOption = (type) => {
     setCreateType(type)
@@ -188,14 +190,38 @@ function App() {
     }
   }
 
-  const handleFileUpload = async (event) =>
-    {
+  const handleFileUpload = async (event) => {
     const files = Array.from(event.target.files)
     await handleFileDrop(files)
+    // Reset the file input value
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
   }
 
   const handleToothClick = () => {
+    console.log('Tooth clicked! Selected Item:', selectedItem)
+    
+    if (selectedItems.size > 1) {
+      if (!isMessageChanging) {
+        setIsMessageChanging(true)
+        setMessage("Make sure only 1 quiz or deck is selected!")
+        setIsMessageFading(false)
+        
+        setTimeout(() => {
+          setIsMessageFading(true)
+          setTimeout(() => {
+            setMessage("Click Me to Get Smarter!")
+            setIsMessageFading(false)
+            setIsMessageChanging(false)
+          }, 1000)
+        }, 3000)
+      }
+      return
+    }
+    
     if (!selectedItem) {
+      console.log('No item selected, showing message')
       if (!isMessageChanging) {
         setIsMessageChanging(true)
         setMessage("Select a Quiz or Deck to Begin!")
@@ -215,16 +241,65 @@ function App() {
 
     try {
       const content = JSON.parse(selectedItem.content)
+      console.log('Parsed content:', content)
+      
+      // Get quiz name from filename first, fallback to content name
+      const quizName = getBaseName(selectedItem.name) || content.name
+      
+      // Verify content has required fields
+      if (!content.items || !Array.isArray(content.items)) {
+        throw new Error('Invalid quiz/deck format')
+      }
+
+      // Process items to extract correct answers from asterisk notation
+      const processedItems = content.items.map(item => {
+        if (!item.question || !Array.isArray(item.answers)) {
+          return null
+        }
+
+        // Find the correct answer(s) by looking for asterisk
+        const processedAnswers = []
+        const correct = []
+
+        item.answers.forEach(answer => {
+          if (answer.startsWith('*')) {
+            // Remove asterisk and add to both arrays
+            const cleanAnswer = answer.substring(1)
+            processedAnswers.push(cleanAnswer)
+            correct.push(cleanAnswer)
+          } else {
+            processedAnswers.push(answer)
+          }
+        })
+
+        return {
+          question: item.question,
+          answers: processedAnswers,
+          correct: correct,
+          explanation: item.explanation || 'No explanation provided.'
+        }
+      }).filter(item => item !== null && item.correct.length > 0)
+
+      if (processedItems.length === 0) {
+        throw new Error('No valid questions found')
+      }
+
+      console.log('Processed items:', processedItems)
+      
+      // Launch QuizRunner with processed items and name
       setShowQuizRunner(true)
+      setCurrentQuestions(processedItems)
+      setCurrentQuizName(quizName)
     } catch (error) {
       console.error('Error parsing quiz content:', error)
-      alert('Error loading quiz content')
+      console.error('Error details:', error.message)
+      alert('Error loading quiz/deck content. Please check the file format.')
     }
   }
 
   const getBaseName = (filename, forComparison = false) => {
     if (forComparison) {
-      // For comparing names, remove all spaces and normalize
+      // For comparing names, remove all spaces and normalize to lowercase
       return filename
         .replace(/\s+/g, '')  // Remove all spaces
         .replace(/[_-](?:quiz|flash)\.(txt|csv|jqz)$/i, '')
@@ -233,6 +308,7 @@ function App() {
     }
     
     // For display/general use, just remove the type suffix and extension
+    // but preserve the original case
     return filename
       .replace(/[_-](?:quiz|flash)\.(txt|csv|jqz)$/i, '')
       .trim()
@@ -253,6 +329,7 @@ function App() {
   }
 
   const handleItemClick = (item) => {
+    console.log('Item clicked:', item)
     setSelectedItem(item)
   }
 
@@ -508,6 +585,7 @@ function App() {
   }
 
   const handleItemSelection = (item, event) => {
+    console.log('Handling item selection:', item)
     const newSelected = new Set(selectedItems)
     
     if (event.ctrlKey || event.metaKey) {
@@ -558,6 +636,7 @@ function App() {
     }
     
     setSelectedItems(newSelected)
+    setSelectedItem(item) // Directly set selectedItem here
   }
 
   const handleRemoveItems = () => {
@@ -1411,8 +1490,9 @@ function App() {
                   <span className="button-icon">📥</span>
                   <span className="button-text">Import</span>
                   <input
-                    id="import-file-upload"
+                    ref={fileInputRef}
                     type="file"
+                    id="import-file-upload"
                     accept=".txt,.csv,.jqz"
                     multiple
                     onChange={handleFileUpload}
@@ -1693,10 +1773,15 @@ function App() {
       )}
 
       {showQuizRunner && (
-        <div className="quiz-runner-overlay">
+        <div 
+          className="quiz-runner-overlay" 
+        >
           <QuizRunner 
-            questions={JSON.parse(selectedItem.content).items}
+            questions={currentQuestions}
+            quizName={currentQuizName}
             onClose={() => setShowQuizRunner(false)}
+            isDarkMode={isDarkMode}
+            onThemeToggle={toggleTheme}
           />
         </div>
       )}
