@@ -367,11 +367,14 @@ function App() {
           }
         })
 
+        // Include all image arrays if they exist
         return {
           question: item.question,
           answers: processedAnswers,
           correct: correct,
-          explanation: item.explanation || 'No explanation provided.'
+          explanation: item.explanation || 'No explanation provided.',
+          questionImages: item.questionImages || [],
+          explanationImages: item.explanationImages || []
         }
       }).filter(item => item !== null && item.correct.length > 0)
 
@@ -381,6 +384,13 @@ function App() {
 
       console.log('Processed items:', processedItems)
       
+      console.log('About to show QuizRunner with:', {
+        questions: processedItems,
+        quizName,
+        isDarkMode,
+        currentQuestions: processedItems.length
+      })
+
       // Launch QuizRunner with processed items and name
       setShowQuizRunner(true)
       setCurrentQuestions(processedItems)

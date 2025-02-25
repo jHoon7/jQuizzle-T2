@@ -2,60 +2,54 @@ import { useState, useEffect, useRef } from 'react'
 import '../styles/QuizRunner.css'
 
 const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle }) => {
-  // Group all useState hooks together at the top
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [shuffledQuestions, setShuffledQuestions] = useState([])
   const [userAnswers, setUserAnswers] = useState([])
   const [flaggedQuestions, setFlaggedQuestions] = useState(new Set())
+  const [isSubmitted, setIsSubmitted] = useState(false)
   const [startTime] = useState(Date.now())
   const [elapsedTime, setElapsedTime] = useState(0)
-  const [isSubmitted, setIsSubmitted] = useState(false)
+  const [shuffledQuestions, setShuffledQuestions] = useState([])
   const [showExitWarning, setShowExitWarning] = useState(false)
   const [showSubmitWarning, setShowSubmitWarning] = useState(false)
-
-  // useRef after useState
+  const [showImagePreview, setShowImagePreview] = useState(null)
+  const [previewImageDimensions, setPreviewImageDimensions] = useState({ width: 0, height: 0 })
+  
   const timerRef = useRef(null)
+  
+  // Determine if the current question has multiple correct answers
+  const isMultiple = shuffledQuestions[currentIndex]?.correct?.length > 1
 
-  // Utility functions
-  const shuffleArray = (array) => {
-    const shuffled = [...array]
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1))
-      ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
-    }
-    return shuffled
-  }
-
-  // Group useEffect hooks together
+  // Shuffle questions on component mount
   useEffect(() => {
-    // Initialize shuffled questions
-    const shuffled = shuffleArray([...questions]).map(question => {
-      // Create a map to track duplicate answers
+    // Create a copy of the questions array and shuffle it
+    const shuffled = [...questions].map(q => {
+      // Create a map to preserve the relationship between unique IDs and answer text
       const answerMap = new Map()
       
-      // Assign unique IDs to each answer
-      const shuffledAnswers = shuffleArray([...question.answers]).map((answer, index) => {
-        // Create a unique ID for each answer option
-        const uniqueId = `${answer}__${index}`
+      // Generate unique IDs for each answer
+      const uniqueAnswers = q.answers.map((answer, idx) => {
+        const uniqueId = `answer_${idx}_${Math.random().toString(36).substring(2, 9)}`
         answerMap.set(uniqueId, answer)
         return uniqueId
       })
       
-      // Update correct answers with their unique IDs
-      const correctAnswers = shuffledAnswers.filter(uniqueId => 
-        question.correct.includes(answerMap.get(uniqueId))
-      )
+      // Find which unique IDs correspond to correct answers
+      const correctIds = q.correct.map(correctAnswer => {
+        for (const [id, text] of answerMap.entries()) {
+          if (text === correctAnswer) return id
+        }
+        return null
+      }).filter(Boolean)
       
       return {
-        ...question,
-        answers: shuffledAnswers,
-        answerMap: answerMap, // Store the mapping for display
-        correct: correctAnswers
+        ...q,
+        answers: uniqueAnswers,
+        correct: correctIds,
+        answerMap
       }
     })
     
     setShuffledQuestions(shuffled)
-    setUserAnswers(new Array(shuffled.length).fill(null))
   }, [questions])
 
   useEffect(() => {
@@ -144,50 +138,26 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
     return question.correct.includes(userAnswer)
   }
 
-  const exportResults = () => {
-    const total = shuffledQuestions.length
-    const score = userAnswers.reduce((acc, answer, idx) => acc + (checkAnswer(idx) ? 1 : 0), 0)
-    const resultText = [
-      `Quiz Results Summary\n${'='.repeat(50)}\n`,
-      `Final Score: ${score}/${total} (${(score / total * 100).toFixed(1)}%)`,
-      `Time Taken: ${formatTime(elapsedTime)}\n`,
-      'Detailed Question Analysis\n' + '='.repeat(50) + '\n'
-    ]
-
-    shuffledQuestions.forEach((q, i) => {
-      const userAnswer = userAnswers[i] || 'No answer'
-      const isCorrect = checkAnswer(i)
-      
-      // Convert unique IDs back to answer text for display
-      const userAnswerText = Array.isArray(userAnswer) 
-        ? userAnswer.map(id => q.answerMap.get(id)).join(', ') 
-        : q.answerMap.get(userAnswer) || 'No answer'
-      
-      const correctAnswerText = q.correct.map(id => q.answerMap.get(id)).join(', ')
-      
-      resultText.push(
-        `Question ${i + 1}:\n${q.question}\n`,
-        `Your Answer: ${userAnswerText}`,
-        `Correct Answer: ${correctAnswerText}`,
-        `Status: ${isCorrect ? 'Correct' : 'Incorrect'}`,
-        `Explanation: ${q.explanation || 'No explanation provided.'}\n${'-'.repeat(50)}\n`
-      )
+  const getQuizStats = () => {
+    let correct = 0
+    let incorrect = 0
+    
+    shuffledQuestions.forEach((_, index) => {
+      if (checkAnswer(index)) {
+        correct++
+      } else {
+        incorrect++
+      }
     })
-
-    const blob = new Blob([resultText.join('\n')], { type: 'text/plain' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `quiz_results_${new Date().toISOString().replace(/[:.]/g, '-')}.txt`
-    a.click()
-    URL.revokeObjectURL(url)
+    
+    const total = shuffledQuestions.length
+    const percentage = Math.round((correct / total) * 100)
+    
+    return { correct, incorrect, total, percentage }
   }
 
-  // Determine if the current question has multiple correct answers
-  const isMultiple = currentQuestion.correct && currentQuestion.correct.length > 1
-
   const getUnansweredCount = () => {
-    return userAnswers.filter(answer => !answer).length
+    return shuffledQuestions.length - userAnswers.filter(a => a && (Array.isArray(a) ? a.length > 0 : true)).length
   }
 
   const handleExitClick = () => {
@@ -198,18 +168,84 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
     setShowSubmitWarning(true)
   }
 
-  // Add this helper function to calculate stats
-  const getQuizStats = () => {
-    const total = shuffledQuestions.length
-    const correct = userAnswers.reduce((acc, _, idx) => acc + (checkAnswer(idx) ? 1 : 0), 0)
-    const incorrect = total - correct
-    const percentage = ((correct / total) * 100).toFixed(1)
-    return { total, correct, incorrect, percentage }
+  const exportResults = () => {
+    // Create a CSV string with the results
+    let csv = 'Question,Your Answer,Correct Answer,Result\n'
+    
+    shuffledQuestions.forEach((question, index) => {
+      const userAnswer = userAnswers[index]
+      const isCorrect = checkAnswer(index)
+      
+      // Get the text of the answers from the unique IDs
+      const userAnswerText = Array.isArray(userAnswer) 
+        ? userAnswer.map(id => getAnswerText(id)).join('; ')
+        : getAnswerText(userAnswer) || 'No answer'
+      
+      const correctAnswerText = question.correct.map(id => getAnswerText(id)).join('; ')
+      
+      // Escape any commas in the question text
+      const escapedQuestion = question.question.replace(/"/g, '""')
+      
+      csv += `"${escapedQuestion}","${userAnswerText}","${correctAnswerText}",${isCorrect ? 'Correct' : 'Incorrect'}\n`
+    })
+    
+    // Create a download link
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.setAttribute('href', url)
+    link.setAttribute('download', `${quizName}_results.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   }
 
   // Helper function to get display text from unique ID
   const getAnswerText = (uniqueId) => {
     return currentQuestion.answerMap?.get(uniqueId) || uniqueId
+  }
+
+  const handleImageClick = (image) => {
+    setShowImagePreview(image)
+    
+    // Get the natural dimensions of the image
+    const img = new Image()
+    img.onload = () => {
+      setPreviewImageDimensions({
+        width: img.naturalWidth,
+        height: img.naturalHeight
+      })
+    }
+    img.src = image
+  }
+
+  const closeImagePreview = () => {
+    setShowImagePreview(null)
+  }
+
+  // Render image thumbnails with hover functionality
+  const renderImages = (images) => {
+    if (!images || !Array.isArray(images) || images.length === 0) return null
+    
+    return (
+      <div className="quiz-images-container">
+        {images.map((image, index) => (
+          <div 
+            key={index} 
+            className="quiz-image-thumbnail-container"
+            onClick={() => handleImageClick(image)}
+            title="Click to enlarge"
+          >
+            <img 
+              src={image} 
+              alt={`Image ${index + 1}`} 
+              className="quiz-image-thumbnail"
+            />
+          </div>
+        ))}
+      </div>
+    )
   }
 
   return (
@@ -294,13 +330,7 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
           <p className="question-text">{currentQuestion.question}</p>
           
           {/* Display question images if they exist */}
-          {currentQuestion.questionImages && currentQuestion.questionImages.length > 0 && (
-            <div className="question-images">
-              {currentQuestion.questionImages.map((img, idx) => (
-                <img key={idx} src={img} alt={`Question ${currentIndex + 1} image ${idx + 1}`} />
-              ))}
-            </div>
-          )}
+          {renderImages(currentQuestion.questionImages)}
           
           <div className="options-container">
             {currentQuestion.answers && currentQuestion.answers.map((uniqueId, idx) => {
@@ -342,13 +372,7 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
               <p><span className="result-label">Explanation:</span> {currentQuestion.explanation || 'No explanation provided.'}</p>
               
               {/* Display explanation images if they exist */}
-              {currentQuestion.explanationImages && currentQuestion.explanationImages.length > 0 && (
-                <div className="explanation-images">
-                  {currentQuestion.explanationImages.map((img, idx) => (
-                    <img key={idx} src={img} alt={`Explanation image ${idx + 1}`} />
-                  ))}
-                </div>
-              )}
+              {renderImages(currentQuestion.explanationImages)}
             </div>
           )}
         </div>
@@ -427,6 +451,19 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
           {isDarkMode ? '☀️' : '🌙'}
         </button>
       </div>
+
+      {/* Full-size image preview */}
+      {showImagePreview && (
+        <div className="quiz-image-preview-overlay" onClick={closeImagePreview}>
+          <div className="quiz-image-preview-container">
+            <img 
+              src={showImagePreview} 
+              alt="Preview" 
+              className="quiz-image-preview"
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

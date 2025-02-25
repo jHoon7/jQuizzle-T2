@@ -764,4 +764,130 @@
 
 .light .result-label {
   color: var(--text-primary);
+}
+
+/* Image styling - Update the existing styles */
+.quiz-images-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.quiz-image-thumbnail-container {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  overflow: hidden;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.quiz-image-thumbnail-container:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+}
+
+.quiz-image-thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: all 0.2s;
+}
+
+/* Hover preview styles */
+.quiz-image-thumbnail-container:hover::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.2);
+  z-index: 1;
+}
+
+.quiz-image-thumbnail-container:hover::before {
+  content: '🔍';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 20px;
+  z-index: 2;
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
+}
+
+/* Full-size image preview */
+.quiz-image-preview-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1100;
+  cursor: pointer;
+}
+
+.quiz-image-preview-container {
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.quiz-image-preview {
+  max-width: 100%;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Add a close button to the preview */
+.quiz-image-preview-container::after {
+  content: '×';
+  position: absolute;
+  top: -40px;
+  right: 0;
+  font-size: 30px;
+  color: white;
+  cursor: pointer;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.quiz-image-preview-container::after:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+/* Fix the counter for multiple images - remove it since it's causing blue dots */
+.quiz-images-container::before {
+  display: none; /* Remove the counter that was causing blue dots */
+}
+
+/* Remove the image dimensions display */
+.image-dimensions {
+  display: none; /* Hide the image dimensions text */
+}
+
+/* Fix the close button hover state */
+.quiz-image-preview-container::after:hover {
+  background: rgba(0, 0, 0, 0.8);
 } 
