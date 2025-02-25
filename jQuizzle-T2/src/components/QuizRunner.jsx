@@ -30,14 +30,26 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
   useEffect(() => {
     // Initialize shuffled questions
     const shuffled = shuffleArray([...questions]).map(question => {
-      const shuffledAnswers = shuffleArray([...question.answers])
-      const correctAnswers = shuffledAnswers.filter(answer => 
-        question.correct.includes(answer)
+      // Create a map to track duplicate answers
+      const answerMap = new Map()
+      
+      // Assign unique IDs to each answer
+      const shuffledAnswers = shuffleArray([...question.answers]).map((answer, index) => {
+        // Create a unique ID for each answer option
+        const uniqueId = `${answer}__${index}`
+        answerMap.set(uniqueId, answer)
+        return uniqueId
+      })
+      
+      // Update correct answers with their unique IDs
+      const correctAnswers = shuffledAnswers.filter(uniqueId => 
+        question.correct.includes(answerMap.get(uniqueId))
       )
       
       return {
         ...question,
         answers: shuffledAnswers,
+        answerMap: answerMap, // Store the mapping for display
         correct: correctAnswers
       }
     })
@@ -70,18 +82,18 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
     return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`
   }
 
-  const handleAnswerChange = (answer, isMultiple = false) => {
+  const handleAnswerChange = (uniqueId, isMultiple = false) => {
     setUserAnswers(prev => {
       const newAnswers = [...prev]
       if (isMultiple) {
         const currentAnswer = prev[currentIndex] || []
-        if (currentAnswer.includes(answer)) {
-          newAnswers[currentIndex] = currentAnswer.filter(a => a !== answer)
+        if (currentAnswer.includes(uniqueId)) {
+          newAnswers[currentIndex] = currentAnswer.filter(a => a !== uniqueId)
         } else {
-          newAnswers[currentIndex] = [...currentAnswer, answer]
+          newAnswers[currentIndex] = [...currentAnswer, uniqueId]
         }
       } else {
-        newAnswers[currentIndex] = answer
+        newAnswers[currentIndex] = uniqueId
       }
       return newAnswers
     })
@@ -105,19 +117,21 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
   }
 
   const getQuestionStatus = (index) => {
+    const isFlagged = flaggedQuestions.has(index);
+    
     if (isSubmitted) {
-      const isCorrect = checkAnswer(index)
-      return isCorrect ? 'correct' : 'incorrect'
+      const isCorrect = checkAnswer(index);
+      // Return both the correctness status and flagged status if applicable
+      return `${isCorrect ? 'correct' : 'incorrect'}${isFlagged ? ' flagged' : ''}`;
     }
     
-    const isFlagged = flaggedQuestions.has(index)
     const isAnswered = Boolean(userAnswers[index] && 
-      (Array.isArray(userAnswers[index]) ? userAnswers[index].length > 0 : true))
+      (Array.isArray(userAnswers[index]) ? userAnswers[index].length > 0 : true));
     
-    if (isFlagged && isAnswered) return 'flagged-answered'
-    if (isFlagged) return 'flagged'
-    if (isAnswered) return 'answered'
-    return 'unanswered'
+    if (isFlagged && isAnswered) return 'flagged-answered';
+    if (isFlagged) return 'flagged';
+    if (isAnswered) return 'answered';
+    return 'unanswered';
   }
 
   const checkAnswer = (index) => {
@@ -125,7 +139,7 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
     const userAnswer = userAnswers[index]
     if (!userAnswer) return false
     if (question.correct.length > 1) {
-      return JSON.stringify(userAnswer.sort()) === JSON.stringify(question.correct.sort())
+      return JSON.stringify([...userAnswer].sort()) === JSON.stringify([...question.correct].sort())
     }
     return question.correct.includes(userAnswer)
   }
@@ -143,10 +157,18 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
     shuffledQuestions.forEach((q, i) => {
       const userAnswer = userAnswers[i] || 'No answer'
       const isCorrect = checkAnswer(i)
+      
+      // Convert unique IDs back to answer text for display
+      const userAnswerText = Array.isArray(userAnswer) 
+        ? userAnswer.map(id => q.answerMap.get(id)).join(', ') 
+        : q.answerMap.get(userAnswer) || 'No answer'
+      
+      const correctAnswerText = q.correct.map(id => q.answerMap.get(id)).join(', ')
+      
       resultText.push(
         `Question ${i + 1}:\n${q.question}\n`,
-        `Your Answer: ${Array.isArray(userAnswer) ? userAnswer.join(', ') : userAnswer}`,
-        `Correct Answer: ${q.correct.join(', ')}`,
+        `Your Answer: ${userAnswerText}`,
+        `Correct Answer: ${correctAnswerText}`,
         `Status: ${isCorrect ? 'Correct' : 'Incorrect'}`,
         `Explanation: ${q.explanation || 'No explanation provided.'}\n${'-'.repeat(50)}\n`
       )
@@ -161,7 +183,8 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
     URL.revokeObjectURL(url)
   }
 
-  const isMultiple = currentQuestion.correct.length > 1
+  // Determine if the current question has multiple correct answers
+  const isMultiple = currentQuestion.correct && currentQuestion.correct.length > 1
 
   const getUnansweredCount = () => {
     return userAnswers.filter(answer => !answer).length
@@ -182,6 +205,11 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
     const incorrect = total - correct
     const percentage = ((correct / total) * 100).toFixed(1)
     return { total, correct, incorrect, percentage }
+  }
+
+  // Helper function to get display text from unique ID
+  const getAnswerText = (uniqueId) => {
+    return currentQuestion.answerMap?.get(uniqueId) || uniqueId
   }
 
   return (
@@ -260,26 +288,46 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
         <div className="question-container">
           <h1 className="quiz-name">{quizName}</h1>
           
-          <h2>Question {currentIndex + 1} of {shuffledQuestions.length}</h2>
+          <h2 className={flaggedQuestions.has(currentIndex) ? 'flagged' : ''}>
+            Question {currentIndex + 1} of {shuffledQuestions.length}
+          </h2>
           <p className="question-text">{currentQuestion.question}</p>
           
+          {/* Display question images if they exist */}
+          {currentQuestion.questionImages && currentQuestion.questionImages.length > 0 && (
+            <div className="question-images">
+              {currentQuestion.questionImages.map((img, idx) => (
+                <img key={idx} src={img} alt={`Question ${currentIndex + 1} image ${idx + 1}`} />
+              ))}
+            </div>
+          )}
+          
           <div className="options-container">
-            {currentQuestion.answers.map((option, idx) => {
+            {currentQuestion.answers && currentQuestion.answers.map((uniqueId, idx) => {
               const isChecked = isMultiple
-                ? (userAnswers[currentIndex] || []).includes(option)
-                : userAnswers[currentIndex] === option
+                ? (userAnswers[currentIndex] || []).includes(uniqueId)
+                : userAnswers[currentIndex] === uniqueId
+
+              // Get the actual answer text from the unique ID
+              const answerText = getAnswerText(uniqueId)
+              
+              // Check if this is a correct answer (for highlighting after submission)
+              const isCorrectAnswer = currentQuestion.correct.includes(uniqueId)
 
               return (
-                <label key={idx} className="option-label">
+                <label 
+                  key={uniqueId} 
+                  className={`option-label ${isSubmitted && isCorrectAnswer ? 'correct-answer' : ''}`}
+                >
                   <input
                     type={isMultiple ? 'checkbox' : 'radio'}
                     name={`question-${currentIndex}`}
-                    value={option}
+                    value={uniqueId}
                     checked={isChecked}
-                    onChange={() => handleAnswerChange(option, isMultiple)}
+                    onChange={() => handleAnswerChange(uniqueId, isMultiple)}
                     disabled={isSubmitted}
                   />
-                  <span className="option-text">{option}</span>
+                  <span className="option-text">{answerText}</span>
                 </label>
               )
             })}
@@ -287,11 +335,20 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
 
           {isSubmitted && (
             <div className={`results ${checkAnswer(currentIndex) ? 'correct' : 'incorrect'}`}>
-              <p>Your Answer: {Array.isArray(userAnswers[currentIndex]) 
-                ? userAnswers[currentIndex]?.join(', ') 
-                : userAnswers[currentIndex] || 'No answer'}</p>
-              <p>Correct Answer: {currentQuestion.correct.join(', ')}</p>
-              <p>Explanation: {currentQuestion.explanation || 'No explanation provided.'}</p>
+              <p><span className="result-label">Your Answer:</span> {Array.isArray(userAnswers[currentIndex]) 
+                ? userAnswers[currentIndex]?.map(id => getAnswerText(id)).join(', ') 
+                : getAnswerText(userAnswers[currentIndex]) || 'No answer'}</p>
+              <p><span className="result-label">Correct Answer:</span> {currentQuestion.correct.map(id => getAnswerText(id)).join(', ')}</p>
+              <p><span className="result-label">Explanation:</span> {currentQuestion.explanation || 'No explanation provided.'}</p>
+              
+              {/* Display explanation images if they exist */}
+              {currentQuestion.explanationImages && currentQuestion.explanationImages.length > 0 && (
+                <div className="explanation-images">
+                  {currentQuestion.explanationImages.map((img, idx) => (
+                    <img key={idx} src={img} alt={`Explanation image ${idx + 1}`} />
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

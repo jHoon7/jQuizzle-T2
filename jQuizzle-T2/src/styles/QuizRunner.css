@@ -127,6 +127,37 @@
 .question-number.correct { background: #28a745; }
 .question-number.incorrect { background: #dc3545; }
 
+/* Add a combined status for flagged and graded questions */
+.question-number.correct.flagged,
+.question-number.incorrect.flagged {
+  position: relative;
+  overflow: visible;
+}
+
+/* Remove the previous flag indicator styles */
+.question-number.correct.flagged::after,
+.question-number.incorrect.flagged::after {
+  display: none;
+}
+
+/* Add a flag indicator to the question title when flagged */
+.question-container h2 {
+  color: var(--text-primary);
+  margin-bottom: 20px;
+  font-size: 1.4em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Add the flag indicator to the question title */
+.question-container h2.flagged::after {
+  content: "🚩";
+  font-size: 0.8em;
+  display: inline-block;
+  margin-left: 8px;
+}
+
 .quiz-content {
   flex: 1;
   padding: 40px;
@@ -166,9 +197,12 @@
   width: 100%;
   background: var(--background-dark);
   padding: 30px;
+  padding-bottom: 80px; /* Add extra padding at the bottom */
   border-radius: 12px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
   margin-bottom: auto; /* Push content up */
+  position: relative;
+  z-index: 20; /* Make sure content is above the navigation */
 }
 
 .question-container h2 {
@@ -280,6 +314,8 @@
   border-radius: 8px;
   border-left: 4px solid;
   transition: all 0.3s;
+  position: relative;
+  z-index: 20; /* Ensure results are above navigation */
 }
 
 .results.correct {
@@ -696,4 +732,36 @@
   align-items: center;
   gap: 20px;
   margin-bottom: 30px;
+}
+
+/* Add styles for correct answer highlighting */
+.option-label.correct-answer {
+  border: 2px dotted #28a745;
+  background-color: rgba(40, 167, 69, 0.05);
+}
+
+/* Update results section styling */
+.results p {
+  margin: 10px 0;
+  color: var(--text-primary);
+  font-size: 1em;
+  line-height: 1.4;
+}
+
+/* Add styling for result labels */
+.result-label {
+  font-weight: bold;
+  font-size: 1.1em;
+  margin-right: 8px;
+  color: var(--text-primary);
+}
+
+/* Ensure light mode has appropriate styling */
+.light .option-label.correct-answer {
+  border: 2px dotted #28a745;
+  background-color: rgba(40, 167, 69, 0.1);
+}
+
+.light .result-label {
+  color: var(--text-primary);
 } 

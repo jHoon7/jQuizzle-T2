@@ -1740,3 +1740,88 @@ p {
   margin-left: 40px;
   font-size: 0.9em;
 }
+
+/* Warning Modal Styles */
+.warning-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.warning-modal {
+  background-color: var(--bg-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.warning-header {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 12px 16px;
+  font-weight: bold;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.warning-message {
+  padding: 16px;
+  color: var(--text-color);
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.warning-message p {
+  margin: 8px 0;
+}
+
+.warning-buttons {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 16px;
+  gap: 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.warning-button {
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.warning-button.primary {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+}
+
+.warning-button.primary:hover {
+  background-color: #c82333;
+}
+
+.warning-button.secondary {
+  background-color: transparent;
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+}
+
+.warning-button.secondary:hover {
+  background-color: var(--hover-color);
+}

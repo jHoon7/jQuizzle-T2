@@ -37,6 +37,95 @@ const ConfirmationModal = ({ onConfirm, onCancel, onDiscard }) => {
   )
 }
 
+// Add a new WarningModal component outside of App component
+const WarningModal = ({ message, onConfirm, onCancel, showCancel = false, confirmText = 'OK' }) => {
+  return (
+    <div className="warning-modal-overlay">
+      <div className="warning-modal">
+        <div className="warning-header">
+          ⚠️ Warning
+        </div>
+        <div className="warning-message">
+          {message.split('\n').map((line, i) => (
+            <p key={i}>{line}</p>
+          ))}
+        </div>
+        <div className="warning-buttons">
+          {showCancel && (
+            <button 
+              className="warning-button secondary"
+              onClick={onCancel}
+            >
+              Back
+            </button>
+          )}
+          {onConfirm && (
+            <button 
+              className="warning-button primary"
+              onClick={onConfirm}
+            >
+              {confirmText}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Find the ExpandedInput component or add it if it doesn't exist
+// This would typically be defined outside the App component
+
+const ExpandedInput = ({ inputId, content, onClose }) => {
+  const [expandedContent, setExpandedContent] = useState(content)
+  
+  const handleContentChange = (e) => {
+    setExpandedContent(e.target.value)
+  }
+  
+  const handleClose = () => {
+    // Update the original input with the expanded content
+    const originalInput = document.getElementById(inputId)
+    if (originalInput) {
+      originalInput.value = expandedContent
+      // Trigger a change event to update state
+      const event = new Event('change', { bubbles: true })
+      originalInput.dispatchEvent(event)
+    }
+    onClose()
+  }
+  
+  // Focus the textarea when the component mounts
+  useEffect(() => {
+    const textarea = document.getElementById('expanded-textarea')
+    if (textarea) {
+      textarea.focus()
+    }
+  }, [])
+  
+  return (
+    <div className="expanded-input-overlay">
+      <div className="expanded-input-container">
+        <div className="expanded-header">
+          <h3>{inputId === 'side1' ? 'Question' : inputId === 'side2' ? 'Answer Choices' : 'Explanation'}</h3>
+        </div>
+        <textarea 
+          id="expanded-textarea"
+          className="expanded-input"
+          data-input-type={inputId}
+          value={expandedContent}
+          onChange={handleContentChange}
+        />
+        <div className="expanded-controls">
+          <button className="expanded-button expanded-back" onClick={handleClose}>
+            Back
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function App() {
   const [mode, setMode] = useState(null)
   const [showCreateOptions, setShowCreateOptions] = useState(false)
@@ -87,6 +176,12 @@ function App() {
   const [showQuizRunner, setShowQuizRunner] = useState(false)
   const fileInputRef = useRef(null)
   const [currentQuizName, setCurrentQuizName] = useState('')
+  const [showWarningModal, setShowWarningModal] = useState(false)
+  const [warningMessage, setWarningMessage] = useState('')
+  const [warningCallback, setWarningCallback] = useState(null)
+  const [showWarningCancel, setShowWarningCancel] = useState(false)
+  const [warningConfirmText, setWarningConfirmText] = useState('OK')
+  const [warningCancelCallback, setWarningCancelCallback] = useState(null)
 
   const handleCreateOption = (type) => {
     setCreateType(type)
@@ -649,67 +744,80 @@ function App() {
   }
 
   const handleAddQuestion = () => {
-    // Add a blank question/flashcard
-    const blankItem = createType === 'Quiz'
-      ? {
-          question: '',
-          answers: [],
-          explanation: ''
+    // Check if the current selected question is valid before adding a new one
+    if (createType === 'Quiz' && selectedQuestionIndices.size > 0) {
+      const currentIndex = Math.max(...Array.from(selectedQuestionIndices))
+      const currentQuestion = currentQuestions[currentIndex]
+      
+      // Only validate if the question has content (not blank)
+      if (currentQuestion && (currentQuestion.question?.trim() || 
+                              (Array.isArray(currentQuestion.answers) && 
+                               currentQuestion.answers.some(a => a.trim())))) {
+        const errors = validateQuizQuestion(currentQuestion, currentIndex)
+        
+        if (errors.length > 0) {
+          // Use custom warning with just a back option
+          showWarning(
+            `${errors.join('\n\n')}\n\nPlease fix these issues before adding a new question.`,
+            null,
+            true // Show cancel/back button only
+          )
+          return
         }
-      : {
-          side1: '',
-          side2: ''
-        }
-
-    setCurrentQuestions(prev => {
-      const newQuestions = [...prev, blankItem]
-      const newIndex = newQuestions.length - 1
-      setHasChanges(true)
-      setIsQuizSaved(false)
-      setSelectedQuestionIndices(new Set([newIndex]))
-      // Clear modified state for the new question
-      setModifiedQuestions(prev => {
-        const newSet = new Set(prev)
-        newSet.delete(newIndex)
-        return newSet
-      })
-
-      // Scroll to the new question after a short delay to ensure DOM update
-      setTimeout(() => {
-        const questionsList = document.querySelector('.questions-list')
-        const newQuestion = questionsList.children[newIndex]
-        if (newQuestion) {
-          newQuestion.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        }
-      }, 50)
-
-      return newQuestions
-    })
-
-    // Clear all input fields
-    const side1Input = document.getElementById('side1')
-    const side2Input = document.getElementById('side2')
-    const explanationInput = document.getElementById('explanation')
+      }
+    }
     
-    if (side1Input) side1Input.value = ''
-    if (side2Input) side2Input.value = ''
-    if (explanationInput) explanationInput.value = ''
-    
-    // Clear input values state
-    setInputValues({
-      side1: '',
-      side2: '',
-      explanation: ''
-    })
+    // If no validation issues, add the question directly
+    addNewQuestion()
+  }
 
-    // Focus on the first input for convenience
-    side1Input.focus()
+  const validateQuizQuestion = (question, index) => {
+    const errors = []
+    
+    const answers = Array.isArray(question.answers) ? question.answers.filter(a => a.trim()) : []
+    
+    // Check if there are at least 2 answer options
+    if (answers.length < 2) {
+      errors.push(`The question requires at least 2 answer choices.`)
+    }
+    
+    // Check if at least one answer is marked with *
+    if (!answers.some(answer => answer.trim().startsWith('*'))) {
+      errors.push(`At least one answer must be marked with a *`)
+    }
+    
+    // Check for duplicate answer choices (ignoring the asterisk)
+    const normalizedAnswers = answers.map(answer => answer.trim().replace(/^\*/, ''))
+    const uniqueAnswers = new Set(normalizedAnswers)
+    
+    if (uniqueAnswers.size < normalizedAnswers.length) {
+      errors.push(`Duplicate answer choices detected.`)
+    }
+    
+    return errors
   }
 
   const handleSave = async () => {
     if (currentQuestions.length === 0) {
-      alert('Please add at least one question or flashcard before saving.')
+      showWarning('Please add at least one question or flashcard before saving.', null, true)
       return Promise.reject('No questions to save')
+    }
+
+    // Validate questions if this is a Quiz
+    if (createType === 'Quiz') {
+      const allErrors = []
+      
+      currentQuestions.forEach((item, index) => {
+        const errors = validateQuizQuestion(item, index)
+        if (errors.length > 0) {
+          allErrors.push(`Question ${index + 1}: ${errors.join(' ')}`)
+        }
+      })
+      
+      if (allErrors.length > 0) {
+        showWarning(`Please fix the following issues before saving:\n\n${allErrors.join('\n')}`, null, true)
+        return Promise.reject('Invalid quiz questions')
+      }
     }
 
     const cleanItemName = itemName.trim()
@@ -817,37 +925,6 @@ function App() {
     }
   }
 
-  const ExpandedInput = ({ inputId, content, onClose }) => {
-    return (
-      <div className="expanded-input-overlay" onClick={onClose}>
-        <div className="expanded-input-container" onClick={e => e.stopPropagation()}>
-          <textarea
-            className="expanded-input"
-            data-input-type={inputId}
-            defaultValue={content}
-            onChange={(e) => {
-              // Update the original input field in real-time
-              const input = document.getElementById(inputId);
-              if (input) {
-                input.value = e.target.value;
-                input.dispatchEvent(new Event('input', { bubbles: true }));
-              }
-            }}
-            autoFocus
-          />
-          <div className="expanded-controls">
-            <button 
-              className="expanded-button expanded-back"
-              onClick={onClose}
-            >
-              Back
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   const checkContentChanges = (newContent, inputId) => {
     // Update input values
     setInputValues(prev => ({
@@ -872,6 +949,9 @@ function App() {
               contentChanged = true
             } else if (inputId === 'side2') {
               const newAnswers = newContent.split('\n').filter(a => a.trim())
+              
+              // Update the answers without showing warnings
+              // (Warnings will be shown when saving or adding a new question)
               if (JSON.stringify(currentItem.answers) !== JSON.stringify(newAnswers)) {
                 currentItem.answers = newAnswers
                 contentChanged = true
@@ -1174,6 +1254,75 @@ function App() {
     setShowConfirmModal(false)
   }
 
+  // Update the showWarning function to support custom button text and callback
+  const showWarning = (message, callback = null, showCancel = false, confirmText = 'OK', cancelCallback = null) => {
+    setWarningMessage(message)
+    setWarningCallback(() => callback)
+    setShowWarningCancel(showCancel)
+    setWarningConfirmText(confirmText)
+    setWarningCancelCallback(() => cancelCallback)
+    setShowWarningModal(true)
+  }
+
+  // Extract the question adding logic to a separate function
+  const addNewQuestion = () => {
+    // Add a blank question/flashcard
+    const blankItem = createType === 'Quiz'
+      ? {
+          question: '',
+          answers: [],
+          explanation: ''
+        }
+      : {
+          side1: '',
+          side2: ''
+        }
+
+    setCurrentQuestions(prev => {
+      const newQuestions = [...prev, blankItem]
+      const newIndex = newQuestions.length - 1
+      setHasChanges(true)
+      setIsQuizSaved(false)
+      setSelectedQuestionIndices(new Set([newIndex]))
+      // Clear modified state for the new question
+      setModifiedQuestions(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(newIndex)
+        return newSet
+      })
+
+      // Scroll to the new question after a short delay to ensure DOM update
+      setTimeout(() => {
+        const questionsList = document.querySelector('.questions-list')
+        const newQuestion = questionsList.children[newIndex]
+        if (newQuestion) {
+          newQuestion.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+      }, 50)
+
+      return newQuestions
+    })
+
+    // Clear all input fields
+    const side1Input = document.getElementById('side1')
+    const side2Input = document.getElementById('side2')
+    const explanationInput = document.getElementById('explanation')
+    
+    if (side1Input) side1Input.value = ''
+    if (side2Input) side2Input.value = ''
+    if (explanationInput) explanationInput.value = ''
+    
+    // Clear input values state
+    setInputValues({
+      side1: '',
+      side2: '',
+      explanation: ''
+    })
+
+    // Focus on the first input for convenience
+    side1Input.focus()
+  }
+
   return (
     <div className={`container ${isDarkMode ? 'dark' : 'light'}`} data-mode={mode}>
       {console.log('Mode:', mode)} {/* Debug log */}
@@ -1381,6 +1530,42 @@ function App() {
                   />
                 </div>
 
+                {/* Only show image upload for flashcards, not for quiz answer choices */}
+                {createType !== 'Quiz' && (
+                  <div className="image-upload-section">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleImageUpload(e, 'side2')}
+                      style={{ display: 'none' }}
+                      ref={answerImageInputRef}
+                    />
+                    <button
+                      className="image-upload-button"
+                      onClick={() => answerImageInputRef.current.click()}
+                      disabled={!isNameConfirmed || 
+                        (isEditMode && selectedQuestionIndices.size === 0) ||
+                        (selectedQuestionIndices.size > 0 && 
+                          currentQuestions[Math.max(...Array.from(selectedQuestionIndices))]?.side2Images?.length >= 5)}
+                    >
+                      📷 Add Image
+                      {selectedQuestionIndices.size > 0 && 
+                        currentQuestions[Math.max(...Array.from(selectedQuestionIndices))]?.side2Images?.length > 0 && 
+                        ` (${currentQuestions[Math.max(...Array.from(selectedQuestionIndices))].side2Images.length}/5)`}
+                    </button>
+                    {selectedQuestionIndices.size > 0 && 
+                      currentQuestions[Math.max(...Array.from(selectedQuestionIndices))]?.side2Images?.map((imageSrc, index) => (
+                        <ImageThumbnail
+                          key={index}
+                          imageSrc={imageSrc}
+                          onRemove={handleRemoveImage}
+                          field="side2"
+                          index={index}
+                        />
+                      ))}
+                  </div>
+                )}
+
                 {createType === 'Quiz' && (
                   <div className="input-group">
                     <label htmlFor="explanation">
@@ -1452,7 +1637,7 @@ function App() {
               <div className={`message-bubble ${isMessageFading ? 'fade-out' : ''}`}>
                 {message}
               </div>
-              <h1>Welcome to jQuizzle-T2!</h1>
+              <h1>jQuizzle-T2</h1>
             </>
           )}
           
@@ -1784,6 +1969,19 @@ function App() {
             onThemeToggle={toggleTheme}
           />
         </div>
+      )}
+
+      {showWarningModal && (
+        <WarningModal
+          message={warningMessage}
+          onConfirm={warningCallback}
+          onCancel={() => {
+            if (warningCancelCallback) warningCancelCallback()
+            else setShowWarningModal(false)
+          }}
+          showCancel={showWarningCancel}
+          confirmText={warningConfirmText}
+        />
       )}
     </div>
   )
