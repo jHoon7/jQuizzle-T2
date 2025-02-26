@@ -8,6 +8,7 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [startTime] = useState(Date.now())
   const [elapsedTime, setElapsedTime] = useState(0)
+  const [completionTime, setCompletionTime] = useState(0)
   const [shuffledQuestions, setShuffledQuestions] = useState([])
   const [showExitWarning, setShowExitWarning] = useState(false)
   const [showSubmitWarning, setShowSubmitWarning] = useState(false)
@@ -16,34 +17,46 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
   
   const timerRef = useRef(null)
   
+  // Fisher-Yates shuffle algorithm
+  const shuffle = (array) => {
+    let currentIndex = array.length, randomIndex
+    while (currentIndex !== 0) {
+      randomIndex = Math.floor(Math.random() * currentIndex)
+      currentIndex--
+      [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]]
+    }
+    return array
+  }
+
   // Determine if the current question has multiple correct answers
   const isMultiple = shuffledQuestions[currentIndex]?.correct?.length > 1
 
-  // Shuffle questions on component mount
+  // Shuffle questions and their answers on component mount
   useEffect(() => {
     // Create a copy of the questions array and shuffle it
-    const shuffled = [...questions].map(q => {
-      // Create a map to preserve the relationship between unique IDs and answer text
-      const answerMap = new Map()
+    const shuffled = shuffle([...questions]).map(q => {
+      // Create arrays for answers and their corresponding correct states
+      const answerPairs = q.answers.map((answer, idx) => ({
+        id: `answer_${idx}_${Math.random().toString(36).substring(2, 9)}`,
+        text: answer,
+        isCorrect: q.correct.includes(answer)
+      }))
       
-      // Generate unique IDs for each answer
-      const uniqueAnswers = q.answers.map((answer, idx) => {
-        const uniqueId = `answer_${idx}_${Math.random().toString(36).substring(2, 9)}`
-        answerMap.set(uniqueId, answer)
-        return uniqueId
-      })
+      // Shuffle the answer pairs
+      const shuffledPairs = shuffle([...answerPairs])
       
-      // Find which unique IDs correspond to correct answers
-      const correctIds = q.correct.map(correctAnswer => {
-        for (const [id, text] of answerMap.entries()) {
-          if (text === correctAnswer) return id
-        }
-        return null
-      }).filter(Boolean)
+      // Separate back into answers and correct arrays
+      const shuffledAnswers = shuffledPairs.map(pair => pair.id)
+      const correctIds = shuffledPairs
+        .filter(pair => pair.isCorrect)
+        .map(pair => pair.id)
+      
+      // Create the answer map
+      const answerMap = new Map(shuffledPairs.map(pair => [pair.id, pair.text]))
       
       return {
         ...q,
-        answers: uniqueAnswers,
+        answers: shuffledAnswers,
         correct: correctIds,
         answerMap
       }
@@ -108,6 +121,7 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
   const handleSubmit = () => {
     clearInterval(timerRef.current)
     setIsSubmitted(true)
+    setCompletionTime(Math.floor((Date.now() - startTime) / 1000))
   }
 
   const getQuestionStatus = (index) => {
@@ -180,14 +194,13 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
     // Combine into filename
     const filename = `quiz_results_${sanitizedQuizName}_${formattedDate}.txt`;
     
-    // Calculate total time
-    const totalTime = Math.floor((Date.now() - startTime) / 1000);
-    const minutes = Math.floor(totalTime / 60);
-    const seconds = totalTime % 60;
+    // Use completion time instead of calculating current time
+    const minutes = Math.floor(completionTime / 60);
+    const seconds = completionTime % 60;
     
     // Calculate score
     const score = getQuizStats().correct;
-    const total = questions.length;
+    const total = shuffledQuestions.length;
     const percentage = (score / total * 100).toFixed(1);
 
     // Create content with detailed formatting similar to Python version
@@ -206,30 +219,31 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
     content += "Detailed Question Analysis\n";
     content += "==================================================\n\n";
     
-    // Add each question with details - using questions array to include ALL questions
-    questions.forEach((question, index) => {
-      const answer = userAnswers[index]; // This might be undefined for unanswered questions
+    // Use shuffledQuestions array to maintain the order the user saw
+    shuffledQuestions.forEach((question, index) => {
+      const answer = userAnswers[index];
       
       content += `Question ${index + 1}:\n`;
       content += `${question.question}\n\n`;
       
-      // User's answer - handle unanswered questions
-      const userAnswer = !answer ? "No answer provided" : 
-                        (Array.isArray(answer) ? answer.join(", ") : answer);
-      content += `Your Answer: ${userAnswer}\n`;
+      // Get the actual answer text using the answerMap
+      const userAnswerText = !answer ? "No answer provided" : 
+                          (Array.isArray(answer) 
+                            ? answer.map(id => question.answerMap.get(id)).join(", ")
+                            : question.answerMap.get(answer));
       
-      // Correct answer
-      const correctAnswer = Array.isArray(question.correct)
-        ? question.correct.join(", ")
-        : question.correct;
-      content += `Correct Answer: ${correctAnswer}\n`;
+      content += `Your Answer: ${userAnswerText}\n`;
+      
+      // Get correct answer text using the answerMap
+      const correctAnswerText = question.correct
+        .map(id => question.answerMap.get(id))
+        .join(", ");
+      content += `Correct Answer: ${correctAnswerText}\n`;
       
       // Status (correct/incorrect/unanswered)
       let status = "Unanswered";
       if (answer) {
-        status = Array.isArray(answer)
-          ? (JSON.stringify(answer.sort()) === JSON.stringify(question.correct.sort()) ? 'Correct' : 'Incorrect')
-          : (answer === question.correct ? 'Correct' : 'Incorrect');
+        status = checkAnswer(index) ? 'Correct' : 'Incorrect';
       }
       content += `Status: ${status}\n`;
       
