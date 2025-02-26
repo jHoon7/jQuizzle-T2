@@ -1,8 +1,9 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, Component } from 'react'
 import './App.css'
 import toothLogo from './assets/tooth-logo.svg'
 import topGumLogo from './assets/top-gum-logo.svg'
 import QuizRunner from './components/QuizRunner'
+import FlashcardRunner from './components/FlashcardRunner'
 
 // Move ConfirmationModal outside of App component
 const ConfirmationModal = ({ onConfirm, onCancel, onDiscard }) => {
@@ -126,6 +127,40 @@ const ExpandedInput = ({ inputId, content, onClose }) => {
   )
 }
 
+// Add this class component somewhere before the App function
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null, errorInfo: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    // Update state so the next render will show the fallback UI
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    // You can also log the error to an error reporting service
+    console.error("Quiz Runner Error:", error, errorInfo);
+    this.setState({ error, errorInfo });
+  }
+
+  render() {
+    if (this.state.hasError) {
+      // You can render any custom fallback UI
+      return (
+        <div className="error-boundary">
+          <h2>Something went wrong loading the quiz.</h2>
+          <p>Error: {this.state.error && this.state.error.toString()}</p>
+          <button onClick={() => this.props.onClose()}>Close</button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 function App() {
   const [mode, setMode] = useState(null)
   const [showCreateOptions, setShowCreateOptions] = useState(false)
@@ -182,6 +217,8 @@ function App() {
   const [showWarningCancel, setShowWarningCancel] = useState(false)
   const [warningConfirmText, setWarningConfirmText] = useState('OK')
   const [warningCancelCallback, setWarningCancelCallback] = useState(null)
+  const [isFlashcardRunnerActive, setIsFlashcardRunnerActive] = useState(false)
+  const [currentFlashcardDeck, setCurrentFlashcardDeck] = useState(null)
 
   const handleCreateOption = (type) => {
     setCreateType(type)
@@ -233,6 +270,7 @@ function App() {
           const newItem = {
             name: `${itemName}_${type.toLowerCase()}.jqz`,
             questionCount: items.length,
+            cardCount: items.length, // Add cardCount for flashcards
             content: content
           }
 
@@ -265,6 +303,7 @@ function App() {
           const newItem = {
             name: file.name,
             questionCount: items.length,
+            cardCount: items.length, // Add cardCount for flashcards
             content: JSON.stringify(standardizedContent, null, 2)
           }
 
@@ -316,10 +355,10 @@ function App() {
     }
     
     if (!selectedItem) {
-      console.log('No item selected, showing message')
+      // No item selected
       if (!isMessageChanging) {
         setIsMessageChanging(true)
-        setMessage("Select a Quiz or Deck to Begin!")
+        setMessage("Select a quiz or deck first!")
         setIsMessageFading(false)
         
         setTimeout(() => {
@@ -333,72 +372,44 @@ function App() {
       }
       return
     }
-
-    try {
-      const content = JSON.parse(selectedItem.content)
-      console.log('Parsed content:', content)
-      
-      // Get quiz name from filename first, fallback to content name
-      const quizName = getBaseName(selectedItem.name) || content.name
-      
-      // Verify content has required fields
-      if (!content.items || !Array.isArray(content.items)) {
-        throw new Error('Invalid quiz/deck format')
+    
+    // Handle based on item type
+    const itemName = selectedItem.name.toLowerCase();
+    console.log('Selected item name:', itemName);
+    
+    // Check if it's a quiz
+    if (activeTab === 'quiz' || 
+        itemName.includes('_quiz') || 
+        itemName.includes('quiz_')) {
+      console.log('Loading quiz:', selectedItem);
+      handleRunQuiz(selectedItem);
+    } 
+    // Check if it's a flashcard deck
+    else if (activeTab === 'flashcard' || 
+            itemName.includes('_flash') || 
+            itemName.includes('flash_') || 
+            itemName.includes('_deck') || 
+            itemName.includes('deck_')) {
+      console.log('Loading flashcard deck:', selectedItem);
+      handleFlashcardDeckLaunch(selectedItem);
+    }
+    else {
+      console.log('Unable to determine item type:', selectedItem);
+      // Show a message indicating we can't determine the type
+      if (!isMessageChanging) {
+        setIsMessageChanging(true)
+        setMessage("Unable to determine item type. Try renaming it with _quiz or _deck suffix.")
+        setIsMessageFading(false)
+        
+        setTimeout(() => {
+          setIsMessageFading(true)
+          setTimeout(() => {
+            setMessage("Click Me to Get Smarter!")
+            setIsMessageFading(false)
+            setIsMessageChanging(false)
+          }, 1000)
+        }, 3000)
       }
-
-      // Process items to extract correct answers from asterisk notation
-      const processedItems = content.items.map(item => {
-        if (!item.question || !Array.isArray(item.answers)) {
-          return null
-        }
-
-        // Find the correct answer(s) by looking for asterisk
-        const processedAnswers = []
-        const correct = []
-
-        item.answers.forEach(answer => {
-          if (answer.startsWith('*')) {
-            // Remove asterisk and add to both arrays
-            const cleanAnswer = answer.substring(1)
-            processedAnswers.push(cleanAnswer)
-            correct.push(cleanAnswer)
-          } else {
-            processedAnswers.push(answer)
-          }
-        })
-
-        // Include all image arrays if they exist
-        return {
-          question: item.question,
-          answers: processedAnswers,
-          correct: correct,
-          explanation: item.explanation || 'No explanation provided.',
-          questionImages: item.questionImages || [],
-          explanationImages: item.explanationImages || []
-        }
-      }).filter(item => item !== null && item.correct.length > 0)
-
-      if (processedItems.length === 0) {
-        throw new Error('No valid questions found')
-      }
-
-      console.log('Processed items:', processedItems)
-      
-      console.log('About to show QuizRunner with:', {
-        questions: processedItems,
-        quizName,
-        isDarkMode,
-        currentQuestions: processedItems.length
-      })
-
-      // Launch QuizRunner with processed items and name
-      setShowQuizRunner(true)
-      setCurrentQuestions(processedItems)
-      setCurrentQuizName(quizName)
-    } catch (error) {
-      console.error('Error parsing quiz content:', error)
-      console.error('Error details:', error.message)
-      alert('Error loading quiz/deck content. Please check the file format.')
     }
   }
 
@@ -407,7 +418,7 @@ function App() {
       // For comparing names, remove all spaces and normalize to lowercase
       return filename
         .replace(/\s+/g, '')  // Remove all spaces
-        .replace(/[_-](?:quiz|flash)\.(txt|csv|jqz)$/i, '')
+        .replace(/[_-](?:quiz|flash|deck)\.(txt|csv|jqz)$/i, '') // Added 'deck' to the pattern
         .trim()
         .toLowerCase()  // Case insensitive comparison
     }
@@ -415,7 +426,7 @@ function App() {
     // For display/general use, just remove the type suffix and extension
     // but preserve the original case
     return filename
-      .replace(/[_-](?:quiz|flash)\.(txt|csv|jqz)$/i, '')
+      .replace(/[_-](?:quiz|flash|deck)\.(txt|csv|jqz)$/i, '') // Added 'deck' to the pattern
       .trim()
   }
 
@@ -605,54 +616,55 @@ function App() {
   }
 
   const handleItemDoubleClick = (item, type) => {
-    console.log('Double click - item:', item, 'type:', type)
+    console.log(`Double-clicked ${type} item:`, item)
     
     try {
-      // Parse the content from the saved file
-      const parsedContent = JSON.parse(item.content)
-      
-      // Get the items array from the new format
-      const items = parsedContent.items || []
-      
-      const batchUpdate = () => {
-        setSelectedItem(item)
-        setMode('create')
-        setCreateType(type === 'quiz' ? 'Quiz' : 'Deck')
-        setIsEditMode(true)
-        setEditingItem(item)
-        setItemName(getBaseName(item.name))
-        setIsNameEntered(true)
-        setIsNameConfirmed(true)
-        setIsQuizSaved(false)
-        setHasChanges(false)
-        setOriginalQuestions(items)
-        setCurrentQuestions(items)
-        setSelectedQuestionIndices(new Set())  // Clear any selected questions
-        
-        // Clear input fields
-        const side1Input = document.getElementById('side1')
-        const side2Input = document.getElementById('side2')
-        const explanationInput = document.getElementById('explanation')
-        
-        if (side1Input) side1Input.value = ''
-        if (side2Input) side2Input.value = ''
-        if (explanationInput) explanationInput.value = ''
-        
-        // Clear input values state
-        setInputValues({
-          side1: '',
-          side2: '',
-          explanation: ''
-        })
+      // Parse the content
+      let parsedContent
+      try {
+        if (typeof item.content === 'string') {
+          parsedContent = JSON.parse(item.content)
+        } else {
+          parsedContent = item
+        }
+      } catch (error) {
+        console.error('Error parsing content:', error)
+        parsedContent = item
       }
       
-      batchUpdate()
+      // Extract the items
+      let items = []
+      if (parsedContent && parsedContent.items) {
+        items = parsedContent.items
+      } else if (Array.isArray(parsedContent)) {
+        items = parsedContent
+      } else if (item.items) {
+        items = item.items
+      }
       
-      console.log('Content to parse:', item.content.substring(0, 200) + '...')
-      console.log('Parsed content:', items)
+      // Enter edit mode
+      setMode('create')
+      setCreateType(type === 'quiz' ? 'Quiz' : 'Flashcard')
+      setEditingItem(item)
+      setIsEditMode(true)
+      setItemName(getBaseName(item.name))
+      setIsNameEntered(true)
+      setIsNameConfirmed(true)
+      setCurrentQuestions(items)
+      setOriginalQuestions([...items])
+      setModifiedQuestions(new Set())
+      setHasChanges(false)
+      setSelectedQuestionIndices(new Set())
+
+      // Clear input values
+      setInputValues({
+        side1: '',
+        side2: '',
+        explanation: ''
+      })
     } catch (error) {
-      console.error('Error parsing content:', error)
-      alert('Error loading the item. The file might be corrupted.')
+      console.error('Error opening item for editing:', error)
+      alert('Error opening the item for editing. The file might be corrupted.')
     }
   }
 
@@ -832,6 +844,10 @@ function App() {
 
     const cleanItemName = itemName.trim()
 
+    // Fix: Use '_flash' for Deck type, not '_deck'
+    const typeString = createType === 'Quiz' ? '_quiz' : '_flash'
+    const fileName = `${cleanItemName}${typeString}.jqz`
+
     // Standardize the content structure - but don't use name field for file operations
     const content = {
       type: createType.toLowerCase(),
@@ -859,7 +875,6 @@ function App() {
       })
     }
 
-    const fileName = `${cleanItemName}_${createType.toLowerCase()}.jqz`
     const fileContent = JSON.stringify(content, null, 2)
 
     try {
@@ -898,6 +913,7 @@ function App() {
       const newItem = {
         name: fileName,
         questionCount: currentQuestions.length,
+        cardCount: currentQuestions.length,
         content: fileContent
       }
 
@@ -1333,6 +1349,146 @@ function App() {
     side1Input.focus()
   }
 
+  // Add a dedicated method to launch the flashcard runner
+  const handleFlashcardDeckLaunch = (deck) => {
+    console.log('Launching flashcard deck:', deck)
+    
+    try {
+      // Get the deck content
+      const content = deck.content
+      
+      // Parse the content
+      let parsedContent
+      try {
+        if (typeof content === 'string') {
+          parsedContent = JSON.parse(content)
+        } else {
+          parsedContent = content
+        }
+      } catch (error) {
+        console.error('Error parsing deck content:', error)
+        // If parsing fails, try to use the raw content
+        parsedContent = content
+      }
+      
+      // Extract the cards from the parsed content
+      let cards = []
+      if (parsedContent && parsedContent.items) {
+        cards = parsedContent.items
+      } else if (Array.isArray(parsedContent)) {
+        // If content is directly an array
+        cards = parsedContent
+      } else if (deck.items) {
+        // If items are directly on the deck object
+        cards = deck.items
+      }
+      
+      console.log('Extracted cards:', cards)
+      
+      // Set up the flashcard runner
+      setCurrentFlashcardDeck({
+        name: getBaseName(deck.name),
+        cards: cards
+      })
+      setIsFlashcardRunnerActive(true)
+    } catch (error) {
+      console.error('Error preparing flashcard deck:', error)
+      alert('Error preparing the flashcard deck. The file might be corrupted.')
+    }
+  }
+  
+  // Add a close handler for the flashcard runner
+  const handleCloseFlashcardRunner = () => {
+    console.log('Closing flashcard runner')
+    setIsFlashcardRunnerActive(false)
+    setCurrentFlashcardDeck(null)
+  }
+
+  // Let's update the handleRunQuiz function to fix the blank screen issue
+  const handleRunQuiz = (quizBank) => {
+    console.log('Running quiz bank:', quizBank);
+    
+    try {
+      // Parse the content
+      let parsedContent;
+      try {
+        if (typeof quizBank.content === 'string') {
+          parsedContent = JSON.parse(quizBank.content);
+        } else {
+          parsedContent = quizBank;
+        }
+      } catch (error) {
+        console.error('Error parsing quiz content:', error);
+        // If parsing fails, try to use the raw content
+        parsedContent = quizBank;
+      }
+      
+      // Get quiz name from filename
+      const quizName = getBaseName(quizBank.name);
+      console.log('Quiz name:', quizName);
+      
+      // Extract the questions from the parsed content
+      let questions = [];
+      if (parsedContent && parsedContent.items) {
+        questions = parsedContent.items;
+      } else if (Array.isArray(parsedContent)) {
+        questions = parsedContent;
+      } else if (quizBank.items) {
+        questions = quizBank.items;
+      }
+      
+      console.log('Parsed questions:', questions);
+      
+      // Process questions to ensure correct format
+      const processedQuestions = questions.map(q => {
+        // Make sure correct answers are properly identified
+        if (!q.correct && Array.isArray(q.answers)) {
+          // If correct answers are marked with asterisks
+          const correct = [];
+          const processedAnswers = [];
+          
+          q.answers.forEach(answer => {
+            if (answer.startsWith('*')) {
+              const cleanAnswer = answer.substring(1);
+              processedAnswers.push(cleanAnswer);
+              correct.push(cleanAnswer);
+            } else {
+              processedAnswers.push(answer);
+            }
+          });
+          
+          return {
+            ...q,
+            answers: processedAnswers,
+            correct: correct,
+            explanation: q.explanation || 'No explanation provided.'
+          };
+        }
+        
+        // If the question is already properly formatted
+        return {
+          ...q,
+          explanation: q.explanation || 'No explanation provided.'
+        };
+      });
+      
+      // Check if we have valid questions
+      if (!processedQuestions || processedQuestions.length === 0) {
+        throw new Error('No valid questions found in the quiz');
+      }
+      
+      console.log('Processed questions for quiz runner:', processedQuestions);
+      
+      // Set up the quiz runner
+      setCurrentQuestions(processedQuestions);
+      setCurrentQuizName(quizName);
+      setShowQuizRunner(true);
+    } catch (error) {
+      console.error('Error preparing quiz:', error);
+      alert('Error preparing the quiz. The file might be corrupted.');
+    }
+  };
+
   return (
     <div className={`container ${isDarkMode ? 'dark' : 'light'}`} data-mode={mode}>
       {console.log('Mode:', mode)} {/* Debug log */}
@@ -1637,13 +1793,20 @@ function App() {
             </div>
           ) : (
             <>
-              <button 
-                className="tooth-button"
-                onClick={handleToothClick}
-                aria-label="Tooth Button"
-              >
-                <img src={toothLogo} className="tooth-logo" alt="Tooth Logo" />
-              </button>
+              <div className="tooth-container">
+                {selectedItem && selectedItems.size === 1 && (
+                  <div className="selected-item-name">
+                    {getBaseName(selectedItem.name)}
+                  </div>
+                )}
+                <button 
+                  className="tooth-button"
+                  onClick={handleToothClick}
+                  aria-label="Tooth Button"
+                >
+                  <img src={toothLogo} className="tooth-logo" alt="Tooth Logo" />
+                </button>
+              </div>
               <div className={`message-bubble ${isMessageFading ? 'fade-out' : ''}`}>
                 {message}
               </div>
@@ -1968,16 +2131,16 @@ function App() {
       )}
 
       {showQuizRunner && (
-        <div 
-          className="quiz-runner-overlay" 
-        >
-          <QuizRunner 
-            questions={currentQuestions}
-            quizName={currentQuizName}
-            onClose={() => setShowQuizRunner(false)}
-            isDarkMode={isDarkMode}
-            onThemeToggle={toggleTheme}
-          />
+        <div className="quiz-runner-overlay">
+          <ErrorBoundary onClose={() => setShowQuizRunner(false)}>
+            <QuizRunner 
+              questions={currentQuestions}
+              quizName={currentQuizName}
+              onClose={() => setShowQuizRunner(false)}
+              isDarkMode={isDarkMode}
+              onThemeToggle={toggleTheme}
+            />
+          </ErrorBoundary>
         </div>
       )}
 
@@ -1992,6 +2155,18 @@ function App() {
           showCancel={showWarningCancel}
           confirmText={warningConfirmText}
         />
+      )}
+
+      {isFlashcardRunnerActive && currentFlashcardDeck && (
+        <div className="flashcard-runner-overlay">
+          <FlashcardRunner 
+            cards={currentFlashcardDeck.cards}
+            deckName={currentFlashcardDeck.name}
+            onClose={handleCloseFlashcardRunner}
+            isDarkMode={isDarkMode}
+            onThemeToggle={toggleTheme}
+          />
+        </div>
       )}
     </div>
   )

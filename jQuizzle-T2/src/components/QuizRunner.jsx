@@ -168,37 +168,91 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
     setShowSubmitWarning(true)
   }
 
-  const exportResults = () => {
-    // Create a CSV string with the results
-    let csv = 'Question,Your Answer,Correct Answer,Result\n'
+  const handleExportResults = () => {
+    // Generate a properly formatted date string (DD-MMM-YYYY)
+    const now = new Date();
+    const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+    const formattedDate = `${String(now.getDate()).padStart(2, '0')}${months[now.getMonth()]}${now.getFullYear()}`;
     
-    shuffledQuestions.forEach((question, index) => {
-      const userAnswer = userAnswers[index]
-      const isCorrect = checkAnswer(index)
-      
-      // Get the text of the answers from the unique IDs
-      const userAnswerText = Array.isArray(userAnswer) 
-        ? userAnswer.map(id => getAnswerText(id)).join('; ')
-        : getAnswerText(userAnswer) || 'No answer'
-      
-      const correctAnswerText = question.correct.map(id => getAnswerText(id)).join('; ')
-      
-      // Escape any commas in the question text
-      const escapedQuestion = question.question.replace(/"/g, '""')
-      
-      csv += `"${escapedQuestion}","${userAnswerText}","${correctAnswerText}",${isCorrect ? 'Correct' : 'Incorrect'}\n`
-    })
+    // Create a sanitized quiz name (remove spaces, special chars)
+    const sanitizedQuizName = quizName.replace(/[^a-zA-Z0-9]/g, '_');
     
-    // Create a download link
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.setAttribute('href', url)
-    link.setAttribute('download', `${quizName}_results.csv`)
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    // Combine into filename
+    const filename = `quiz_results_${sanitizedQuizName}_${formattedDate}.txt`;
+    
+    // Calculate total time
+    const totalTime = Math.floor((Date.now() - startTime) / 1000);
+    const minutes = Math.floor(totalTime / 60);
+    const seconds = totalTime % 60;
+    
+    // Calculate score
+    const score = getQuizStats().correct;
+    const total = questions.length;
+    const percentage = (score / total * 100).toFixed(1);
+
+    // Create content with detailed formatting similar to Python version
+    let content = "Quiz Results Summary\n";
+    content += "==================================================\n\n";
+    
+    // Add quiz name
+    content += `Quiz Name: ${quizName}\n`;
+    content += `Date: ${formattedDate}\n\n`;
+    
+    // Add score and time information
+    content += `Final Score: ${score}/${total} (${percentage}%)\n`;
+    content += `Time Taken: ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}\n\n`;
+    
+    // Add detailed analysis section
+    content += "Detailed Question Analysis\n";
+    content += "==================================================\n\n";
+    
+    // Add each question with details - using questions array to include ALL questions
+    questions.forEach((question, index) => {
+      const answer = userAnswers[index]; // This might be undefined for unanswered questions
+      
+      content += `Question ${index + 1}:\n`;
+      content += `${question.question}\n\n`;
+      
+      // User's answer - handle unanswered questions
+      const userAnswer = !answer ? "No answer provided" : 
+                        (Array.isArray(answer) ? answer.join(", ") : answer);
+      content += `Your Answer: ${userAnswer}\n`;
+      
+      // Correct answer
+      const correctAnswer = Array.isArray(question.correct)
+        ? question.correct.join(", ")
+        : question.correct;
+      content += `Correct Answer: ${correctAnswer}\n`;
+      
+      // Status (correct/incorrect/unanswered)
+      let status = "Unanswered";
+      if (answer) {
+        status = Array.isArray(answer)
+          ? (JSON.stringify(answer.sort()) === JSON.stringify(question.correct.sort()) ? 'Correct' : 'Incorrect')
+          : (answer === question.correct ? 'Correct' : 'Incorrect');
+      }
+      content += `Status: ${status}\n`;
+      
+      // Explanation
+      content += `Explanation: ${question.explanation || 'No explanation provided.'}\n`;
+      
+      // Separator between questions
+      content += "\n--------------------------------------------------\n\n";
+    });
+    
+    // Create and download the file
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    
+    // Clean up
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   }
 
   // Helper function to get display text from unique ID
@@ -270,7 +324,7 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
           ) : (
             <button 
               className="export-button"
-              onClick={exportResults}
+              onClick={handleExportResults}
             >
               <span className="button-icon">📥</span>
               Export Results
