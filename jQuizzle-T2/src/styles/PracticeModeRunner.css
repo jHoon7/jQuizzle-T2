@@ -1,0 +1,577 @@
+/* Fix for persistent scrollbar issue */
+html, body {
+  overflow: hidden;
+}
+
+.practice-mode-runner {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden !important;
+  background-color: var(--background-color);
+  color: var(--text-color);
+}
+
+.practice-mode-runner.dark {
+  --background-color: #1a1a1a;
+  --background-lighter: #2a2a2a;
+  --text-color: #f0f0f0;
+  --primary-color: #646cff;
+  --primary-hover: #535bf2;
+  --correct-color: #28a745;
+  --incorrect-color: #dc3545;
+  --neutral-color: #6c757d;
+  --border-color: #444;
+}
+
+.practice-mode-runner.light {
+  --background-color: #f8f9fa;
+  --background-lighter: #ffffff;
+  --text-color: #333;
+  --primary-color: #646cff;
+  --primary-hover: #535bf2;
+  --correct-color: #28a745;
+  --incorrect-color: #dc3545;
+  --neutral-color: #6c757d;
+  --border-color: #dee2e6;
+}
+
+/* Header styles */
+.practice-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background-color: var(--background-lighter);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.practice-title {
+  font-size: 1.5rem;
+  margin: 0;
+  text-align: center;
+  flex: 1;
+}
+
+.practice-close-button {
+  background-color: var(--incorrect-color);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.2s;
+}
+
+.practice-close-button:hover {
+  background-color: #c82333;
+  transform: translateY(-2px);
+}
+
+.practice-theme-toggle {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: transform 0.3s;
+}
+
+.practice-theme-toggle:hover {
+  transform: rotate(15deg);
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.practice-theme-toggle:focus {
+  outline: none;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Main content layout with sidebar */
+.practice-main-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Question navigation panel */
+.practice-question-nav {
+  width: 250px;
+  background-color: var(--background-lighter);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+}
+
+.practice-nav-header {
+  font-weight: bold;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.practice-question-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.3rem;
+  margin-bottom: 1rem;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  padding-right: 5px;
+  padding-top: 2px;
+  margin-top: 2px;
+}
+
+.practice-question-button {
+  aspect-ratio: 1;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--background-color);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.9rem;
+  margin: 1px;
+}
+
+.practice-question-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.practice-question-button.active {
+  border: 2px solid var(--primary-color);
+  transform: scale(1.1);
+  z-index: 1;
+}
+
+.practice-question-button.correct {
+  background-color: var(--correct-color);
+  color: white;
+  border-color: var(--correct-color);
+}
+
+.practice-question-button.incorrect {
+  background-color: var(--incorrect-color);
+  color: white;
+  border-color: var(--incorrect-color);
+}
+
+.practice-question-button.answered {
+  background-color: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+.practice-progress-info {
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+  font-size: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Content area */
+.practice-content-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden !important;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+}
+
+/* Progress bar styles */
+.practice-progress-container {
+  padding: 1rem 2rem;
+  background-color: var(--background-lighter);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.practice-progress-bar {
+  width: 100%;
+  height: 10px;
+  background-color: var(--neutral-color);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.practice-progress-fill {
+  height: 100%;
+  background-color: var(--primary-color);
+  transition: width 0.3s ease;
+}
+
+.practice-progress-text {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-color);
+}
+
+/* Content styles */
+.practice-content {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+  overflow-x: hidden !important;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  max-width: none;
+}
+
+.practice-question h3 {
+  font-size: 1.5rem;
+  margin-top: 0;
+  white-space: pre-line;
+}
+
+/* Answer options */
+.practice-answers {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  max-width: none;
+  overflow: visible;
+  align-items: center;
+}
+
+/* Set consistent width for answer buttons */
+.practice-answer {
+  padding: 1rem;
+  background-color: var(--background-lighter);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 1rem;
+  width: 70%; /* Fixed width for all buttons */
+  box-sizing: border-box;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  /* Remove max-width to ensure consistency */
+}
+
+.practice-answer:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.practice-answer.selected {
+  border-color: var(--primary-color);
+  background-color: rgba(var(--primary-rgb), 0.1);
+}
+
+.practice-answer.correct {
+  background-color: rgba(40, 167, 69, 0.2);
+  border-color: var(--correct-color);
+}
+
+.practice-answer.incorrect {
+  background-color: rgba(220, 53, 69, 0.2);
+  border-color: var(--incorrect-color);
+}
+
+.practice-answer:disabled {
+  cursor: default;
+}
+
+/* Result and explanation */
+.practice-result {
+  background-color: var(--background-lighter);
+  border-radius: 8px;
+  padding: 1rem;
+  border-left: 4px solid var(--neutral-color);
+}
+
+.practice-result.correct {
+  border-left-color: var(--correct-color);
+}
+
+.practice-result.incorrect {
+  border-left-color: var(--incorrect-color);
+}
+
+.practice-result h4 {
+  margin-top: 0;
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+}
+
+.practice-explanation-toggle {
+  background: none;
+  border: none;
+  color: var(--primary-color);
+  cursor: pointer;
+  padding: 0;
+  font-size: 0.9rem;
+  text-decoration: underline;
+  margin-bottom: 1rem;
+  display: inline-block;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+
+.practice-explanation-toggle:hover,
+.practice-explanation-toggle:focus {
+  text-decoration: underline;
+  color: var(--primary-hover);
+  background: transparent !important;
+  outline: none;
+  box-shadow: none;
+}
+
+.practice-explanation {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.practice-explanation p {
+  white-space: pre-line;
+  margin-bottom: 0;
+}
+
+/* Updated action buttons container for new layout */
+.practice-actions-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: visible;
+}
+
+/* Submit button takes full width */
+.practice-button.submit {
+  width: 60%;
+  max-width: 400px;
+  margin: 0 auto;
+  background-color: var(--primary-color);
+  border: none;
+  color: white;
+  text-align: center;
+  padding: 1rem;
+  font-size: 1.1rem;
+}
+
+/* Container for Previous and Next buttons */
+.practice-navigation-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Style for Previous and Next buttons */
+.practice-button.previous,
+.practice-button.next {
+  background-color: var(--background-lighter);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  flex: 0 0 auto;
+  width: 160px;
+  max-width: 30%;
+}
+
+/* Remove the old practice-actions class that's no longer needed */
+.practice-actions {
+  display: none;
+}
+
+/* Image styles */
+.practice-images-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 1rem 0;
+}
+
+.practice-image-thumbnail-container {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  overflow: hidden;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+}
+
+.practice-image-thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.2s;
+}
+
+.practice-image-thumbnail:hover {
+  transform: scale(1.05);
+}
+
+/* Image preview overlay */
+.practice-image-preview-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  cursor: pointer;
+}
+
+.practice-image-preview-container {
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.practice-image-preview {
+  max-width: 100%;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .practice-main-content {
+    flex-direction: column;
+  }
+  
+  .practice-question-nav {
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+  }
+  
+  .practice-header,
+  .practice-progress-container,
+  .practice-content {
+    padding: 1rem;
+  }
+  
+  .practice-title {
+    font-size: 1.2rem;
+  }
+  
+  .practice-button {
+    padding: 0.6rem 1rem;
+    min-width: 100px;
+  }
+}
+
+/* Remove any fixed-width constraints that might cause overflow */
+@media screen and (min-width: 768px) {
+  .practice-content {
+    margin: 0;
+    max-width: none;
+  }
+}
+
+/* Remove horizontal padding to allow more content space */
+@media (min-width: 1200px) {
+  .practice-content {
+    padding-left: 3rem;
+    padding-right: 3rem;
+  }
+}
+
+/* Exit confirmation modal */
+.practice-exit-confirmation-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000; /* Higher than other elements */
+}
+
+.practice-exit-confirmation {
+  background-color: var(--background-lighter);
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  text-align: center;
+}
+
+.practice-exit-confirmation h3 {
+  margin-top: 0;
+  font-size: 1.5rem;
+}
+
+.practice-exit-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.practice-exit-cancel,
+.practice-exit-confirm {
+  padding: 0.8rem 1.5rem;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 120px;
+}
+
+.practice-exit-cancel {
+  background-color: var(--background-color);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+}
+
+.practice-exit-confirm {
+  background-color: var(--incorrect-color);
+  border: none;
+  color: white;
+}
+
+.practice-exit-cancel:hover,
+.practice-exit-confirm:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+} 

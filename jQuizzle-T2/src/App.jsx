@@ -4,6 +4,7 @@ import toothLogo from './assets/tooth-logo.svg'
 import topGumLogo from './assets/top-gum-logo.svg'
 import QuizRunner from './components/QuizRunner'
 import FlashcardRunner from './components/FlashcardRunner'
+import PracticeModeRunner from './components/PracticeModeRunner'
 
 // Move ConfirmationModal outside of App component
 const ConfirmationModal = ({ onConfirm, onCancel, onDiscard }) => {
@@ -219,6 +220,8 @@ function App() {
   const [warningCancelCallback, setWarningCancelCallback] = useState(null)
   const [isFlashcardRunnerActive, setIsFlashcardRunnerActive] = useState(false)
   const [currentFlashcardDeck, setCurrentFlashcardDeck] = useState(null)
+  const [isPracticeModeEnabled, setIsPracticeModeEnabled] = useState(false)
+  const [showPracticeModeRunner, setShowPracticeModeRunner] = useState(false)
 
   const handleCreateOption = (type) => {
     setCreateType(type)
@@ -1533,15 +1536,31 @@ function App() {
       
       console.log('Processed and shuffled questions for quiz runner:', questionsWithShuffledAnswers);
       
-      // Set up the quiz runner with pre-shuffled questions
+      // Set up the appropriate runner based on mode
       setCurrentQuestions(questionsWithShuffledAnswers);
       setCurrentQuizName(quizName);
-      setShowQuizRunner(true);
+      
+      // Launch either practice mode or regular quiz mode based on setting
+      if (isPracticeModeEnabled) {
+        setShowPracticeModeRunner(true);
+      } else {
+        setShowQuizRunner(true);
+      }
     } catch (error) {
       console.error('Error preparing quiz:', error);
       alert('Error preparing the quiz. The file might be corrupted.');
     }
   };
+
+  // Add function to handle close of practice mode runner
+  const handleClosePracticeModeRunner = () => {
+    setShowPracticeModeRunner(false);
+  }
+  
+  // Add function to toggle practice mode
+  const togglePracticeMode = () => {
+    setIsPracticeModeEnabled(!isPracticeModeEnabled);
+  }
 
   return (
     <div className={`container ${isDarkMode ? 'dark' : 'light'}`} data-mode={mode}>
@@ -2010,7 +2029,7 @@ function App() {
                 }}
               >
                 {activeTab === 'quiz' ? (
-                  <div className={`bank-container ${isDraggingOver ? 'dragging-over' : ''}`}>
+                  <>
                     <div className="bank-header">
                       <button 
                         className={`sort-button ${sortField === 'name' ? 'active' : ''}`}
@@ -2035,39 +2054,86 @@ function App() {
                         )}
                       </button>
                     </div>
-                    {[...quizBanks]
-                      .sort((a, b) => {
-                        if (sortField === 'name') {
-                          const nameA = getBaseName(a.name).toLowerCase()
-                          const nameB = getBaseName(b.name).toLowerCase()
-                          return sortDirection === 'asc' 
-                            ? nameA.localeCompare(nameB)
-                            : nameB.localeCompare(nameA)
-                        } else {
-                          return sortDirection === 'asc'
-                            ? a.questionCount - b.questionCount
-                            : b.questionCount - a.questionCount
-                        }
-                      })
-                      .map((bank, index) => (
-                        <div 
-                          key={bank.name} 
-                          className={`bank-item ${selectedItems.has(bank.name) ? 'selected' : ''}`}
-                          onClick={(e) => handleItemSelection(bank, e)}
-                          onDoubleClick={() => handleItemDoubleClick(bank, 'quiz')}
-                        >
-                          <div className="bank-item-left">
-                            <span className="bank-item-number">{index + 1}.</span>
-                            <span>{getBaseName(bank.name)}</span>
+
+                    <div className={`bank-container ${isDraggingOver ? 'dragging-over' : ''}`}>
+                      {[...quizBanks]
+                        .sort((a, b) => {
+                          if (sortField === 'name') {
+                            const nameA = getBaseName(a.name).toLowerCase()
+                            const nameB = getBaseName(b.name).toLowerCase()
+                            return sortDirection === 'asc' 
+                              ? nameA.localeCompare(nameB)
+                              : nameB.localeCompare(nameA)
+                          } else {
+                            return sortDirection === 'asc'
+                              ? a.questionCount - b.questionCount
+                              : b.questionCount - a.questionCount
+                          }
+                        })
+                        .map((bank, index) => (
+                          <div 
+                            key={bank.name} 
+                            className={`bank-item ${selectedItems.has(bank.name) ? 'selected' : ''}`}
+                            onClick={(e) => handleItemSelection(bank, e)}
+                            onDoubleClick={() => handleItemDoubleClick(bank, 'quiz')}
+                          >
+                            <div className="bank-item-left">
+                              <span className="bank-item-number">{index + 1}.</span>
+                              <span>{getBaseName(bank.name)}</span>
+                            </div>
+                            <span>{bank.questionCount} questions</span>
                           </div>
-                          <span>{bank.questionCount} questions</span>
+                        ))}
+                      {quizBanks.length === 0 && (
+                        <div className="empty-state">
                         </div>
-                      ))}
-                    {quizBanks.length === 0 && (
-                      <div className="empty-state">
+                      )}
+                    </div>
+
+                    {/* Add Practice Mode toggle after bank-container */}
+                    <div className="bottom-controls-container">
+                      <div className="practice-mode-toggle-container">
+                        <button 
+                          className={`practice-mode-toggle ${isPracticeModeEnabled ? 'active' : ''}`}
+                          onClick={togglePracticeMode}
+                          title={isPracticeModeEnabled ? "Practice Mode Enabled" : "Regular Quiz Mode"}
+                        >
+                          <span className="practice-mode-icon">🏋️</span>
+                          <span className="practice-mode-text">Practice Mode</span>
+                          <div className={`toggle-switch ${isPracticeModeEnabled ? 'active' : ''}`}>
+                            <div className="toggle-slider"></div>
+                          </div>
+                        </button>
                       </div>
-                    )}
-                  </div>
+                      
+                      {selectedItems.size > 0 && !mode && (
+                        <div className="action-buttons">
+                          {selectedItems.size === 1 && (
+                            <button 
+                              className="edit-button"
+                              onClick={() => {
+                                const item = activeTab === 'quiz' 
+                                  ? quizBanks.find(b => b.name === Array.from(selectedItems)[0])
+                                  : flashcardDecks.find(d => d.name === Array.from(selectedItems)[0])
+                                if (item) {
+                                  const type = activeTab === 'quiz' ? 'quiz' : 'flashcard'
+                                  handleItemDoubleClick(item, type)
+                                }
+                              }}
+                            >
+                              Edit
+                            </button>
+                          )}
+                          <button 
+                            className="remove-button"
+                            onClick={handleRemoveItems}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </>
                 ) : (
                   <div className={`bank-container ${isDraggingOver ? 'dragging-over' : ''}`}>
                     <div className="bank-header">
@@ -2129,32 +2195,6 @@ function App() {
                   </div>
                 )}
               </div>
-              {selectedItems.size > 0 && !mode && (
-                <div className="action-buttons">
-                  {selectedItems.size === 1 && (
-                    <button 
-                      className="edit-button"
-                      onClick={() => {
-                        const item = activeTab === 'quiz' 
-                          ? quizBanks.find(b => b.name === Array.from(selectedItems)[0])
-                          : flashcardDecks.find(d => d.name === Array.from(selectedItems)[0])
-                        if (item) {
-                          const type = activeTab === 'quiz' ? 'quiz' : 'flashcard'
-                          handleItemDoubleClick(item, type)
-                        }
-                      }}
-                    >
-                      Edit
-                    </button>
-                  )}
-                  <button 
-                    className="remove-button"
-                    onClick={handleRemoveItems}
-                  >
-                    Remove
-                  </button>
-                </div>
-              )}
             </>
           )}
         </div>
@@ -2217,6 +2257,19 @@ function App() {
             cards={currentFlashcardDeck.cards}
             deckName={currentFlashcardDeck.name}
             onClose={handleCloseFlashcardRunner}
+            isDarkMode={isDarkMode}
+            onThemeToggle={toggleTheme}
+          />
+        </div>
+      )}
+
+      {/* Add Practice Mode runner */}
+      {showPracticeModeRunner && (
+        <div className="practice-mode-overlay">
+          <PracticeModeRunner
+            questions={currentQuestions}
+            quizName={currentQuizName}
+            onClose={handleClosePracticeModeRunner}
             isDarkMode={isDarkMode}
             onThemeToggle={toggleTheme}
           />
