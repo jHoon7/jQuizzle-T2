@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import '../styles/QuizRunner.css'
 
 const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle }) => {
+  // Basic state setup
   const [currentIndex, setCurrentIndex] = useState(0)
   const [userAnswers, setUserAnswers] = useState([])
   const [flaggedQuestions, setFlaggedQuestions] = useState(new Set())
@@ -9,64 +10,26 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
   const [startTime] = useState(Date.now())
   const [elapsedTime, setElapsedTime] = useState(0)
   const [completionTime, setCompletionTime] = useState(0)
-  const [shuffledQuestions, setShuffledQuestions] = useState([])
   const [showExitWarning, setShowExitWarning] = useState(false)
   const [showSubmitWarning, setShowSubmitWarning] = useState(false)
   const [showImagePreview, setShowImagePreview] = useState(null)
   const [previewImageDimensions, setPreviewImageDimensions] = useState({ width: 0, height: 0 })
   
   const timerRef = useRef(null)
+
+  // Use questions directly from props without reshuffling
+  const currentQuestion = questions[currentIndex] || {}
   
-  // Fisher-Yates shuffle algorithm
-  const shuffle = (array) => {
-    let currentIndex = array.length, randomIndex
-    while (currentIndex !== 0) {
-      randomIndex = Math.floor(Math.random() * currentIndex)
-      currentIndex--
-      [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]]
-    }
-    return array
+  // Check if current question has multiple correct answers
+  const isMultiple = () => {
+    if (!currentQuestion) return false;
+    if (currentQuestion.shuffledCorrectIds && currentQuestion.shuffledCorrectIds.length > 1) return true;
+    if (currentQuestion.correct && currentQuestion.correct.length > 1) return true;
+    return false;
   }
 
-  // Determine if the current question has multiple correct answers
-  const isMultiple = shuffledQuestions[currentIndex]?.correct?.length > 1
-
-  // Shuffle questions and their answers on component mount
+  // Set up timer
   useEffect(() => {
-    // Create a copy of the questions array and shuffle it
-    const shuffled = shuffle([...questions]).map(q => {
-      // Create arrays for answers and their corresponding correct states
-      const answerPairs = q.answers.map((answer, idx) => ({
-        id: `answer_${idx}_${Math.random().toString(36).substring(2, 9)}`,
-        text: answer,
-        isCorrect: q.correct.includes(answer)
-      }))
-      
-      // Shuffle the answer pairs
-      const shuffledPairs = shuffle([...answerPairs])
-      
-      // Separate back into answers and correct arrays
-      const shuffledAnswers = shuffledPairs.map(pair => pair.id)
-      const correctIds = shuffledPairs
-        .filter(pair => pair.isCorrect)
-        .map(pair => pair.id)
-      
-      // Create the answer map
-      const answerMap = new Map(shuffledPairs.map(pair => [pair.id, pair.text]))
-      
-      return {
-        ...q,
-        answers: shuffledAnswers,
-        correct: correctIds,
-        answerMap
-      }
-    })
-    
-    setShuffledQuestions(shuffled)
-  }, [questions])
-
-  useEffect(() => {
-    // Timer effect
     if (!isSubmitted) {
       timerRef.current = setInterval(() => {
         setElapsedTime(Math.floor((Date.now() - startTime) / 1000))
@@ -75,37 +38,32 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
     return () => clearInterval(timerRef.current)
   }, [startTime, isSubmitted])
 
-  // Update all references to 'questions' to use 'shuffledQuestions'
-  const currentQuestion = shuffledQuestions[currentIndex] || {}
-  
-  // Wait for shuffling to complete before rendering
-  if (shuffledQuestions.length === 0) {
-    return null
-  }
-
+  // Format time display
   const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60)
     const remainingSeconds = seconds % 60
     return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`
   }
 
-  const handleAnswerChange = (uniqueId, isMultiple = false) => {
+  // Handle user answer selection
+  const handleAnswerChange = (answerIndex, isMultipleChoice) => {
     setUserAnswers(prev => {
       const newAnswers = [...prev]
-      if (isMultiple) {
+      if (isMultipleChoice) {
         const currentAnswer = prev[currentIndex] || []
-        if (currentAnswer.includes(uniqueId)) {
-          newAnswers[currentIndex] = currentAnswer.filter(a => a !== uniqueId)
+        if (currentAnswer.includes(answerIndex)) {
+          newAnswers[currentIndex] = currentAnswer.filter(a => a !== answerIndex)
         } else {
-          newAnswers[currentIndex] = [...currentAnswer, uniqueId]
+          newAnswers[currentIndex] = [...currentAnswer, answerIndex]
         }
       } else {
-        newAnswers[currentIndex] = uniqueId
+        newAnswers[currentIndex] = answerIndex
       }
       return newAnswers
     })
   }
 
+  // Toggle flagged state of current question
   const toggleFlag = () => {
     setFlaggedQuestions(prev => {
       const newFlags = new Set(prev)
@@ -118,23 +76,25 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
     })
   }
 
+  // Handle quiz submission
   const handleSubmit = () => {
     clearInterval(timerRef.current)
     setIsSubmitted(true)
     setCompletionTime(Math.floor((Date.now() - startTime) / 1000))
   }
 
+  // Determine question status (unanswered, answered, flagged, correct, incorrect)
   const getQuestionStatus = (index) => {
     const isFlagged = flaggedQuestions.has(index);
     
     if (isSubmitted) {
       const isCorrect = checkAnswer(index);
-      // Return both the correctness status and flagged status if applicable
       return `${isCorrect ? 'correct' : 'incorrect'}${isFlagged ? ' flagged' : ''}`;
     }
     
-    const isAnswered = Boolean(userAnswers[index] && 
-      (Array.isArray(userAnswers[index]) ? userAnswers[index].length > 0 : true));
+    const userAnswer = userAnswers[index];
+    const isAnswered = Boolean(userAnswer && 
+      (Array.isArray(userAnswer) ? userAnswer.length > 0 : true));
     
     if (isFlagged && isAnswered) return 'flagged-answered';
     if (isFlagged) return 'flagged';
@@ -142,119 +102,139 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
     return 'unanswered';
   }
 
+  // Check if user's answer is correct
   const checkAnswer = (index) => {
-    const question = shuffledQuestions[index]
-    const userAnswer = userAnswers[index]
-    if (!userAnswer) return false
-    if (question.correct.length > 1) {
-      return JSON.stringify([...userAnswer].sort()) === JSON.stringify([...question.correct].sort())
-    }
-    return question.correct.includes(userAnswer)
-  }
-
-  const getQuizStats = () => {
-    let correct = 0
-    let incorrect = 0
+    const question = questions[index];
+    const userAnswer = userAnswers[index];
     
-    shuffledQuestions.forEach((_, index) => {
-      if (checkAnswer(index)) {
-        correct++
-      } else {
-        incorrect++
+    if (!userAnswer || !question) return false;
+    
+    // Handle shuffled answers (from App.jsx pre-processing)
+    if (question.shuffledCorrectIds) {
+      if (Array.isArray(userAnswer)) {
+        // For multiple choice
+        return JSON.stringify([...userAnswer].sort()) === 
+               JSON.stringify([...question.shuffledCorrectIds].sort());
       }
-    })
+      // For single choice
+      return question.shuffledCorrectIds.includes(userAnswer);
+    }
     
-    const total = shuffledQuestions.length
-    const percentage = Math.round((correct / total) * 100)
+    // Fallback for older format
+    if (question.correct) {
+      if (Array.isArray(userAnswer)) {
+        return JSON.stringify([...userAnswer].sort()) === 
+               JSON.stringify([...question.correct].sort());
+      }
+      return question.correct.includes(userAnswer);
+    }
     
-    return { correct, incorrect, total, percentage }
+    return false;
   }
 
+  // Calculate overall quiz statistics
+  const getQuizStats = () => {
+    let correct = 0;
+    let incorrect = 0;
+    
+    questions.forEach((_, index) => {
+      if (checkAnswer(index)) {
+        correct++;
+      } else {
+        incorrect++;
+      }
+    });
+    
+    const total = questions.length;
+    const percentage = Math.round((correct / total) * 100);
+    
+    return { correct, incorrect, total, percentage };
+  }
+
+  // Count unanswered questions
   const getUnansweredCount = () => {
-    return shuffledQuestions.length - userAnswers.filter(a => a && (Array.isArray(a) ? a.length > 0 : true)).length
+    return questions.length - userAnswers.filter(a => 
+      a && (Array.isArray(a) ? a.length > 0 : true)
+    ).length;
   }
 
+  // UI handlers
   const handleExitClick = () => {
-    setShowExitWarning(true)
+    setShowExitWarning(true);
   }
 
   const handleSubmitClick = () => {
-    setShowSubmitWarning(true)
+    setShowSubmitWarning(true);
   }
 
+  // Export quiz results as a text file
   const handleExportResults = () => {
-    // Generate a properly formatted date string (DD-MMM-YYYY)
     const now = new Date();
     const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
     const formattedDate = `${String(now.getDate()).padStart(2, '0')}${months[now.getMonth()]}${now.getFullYear()}`;
     
-    // Create a sanitized quiz name (remove spaces, special chars)
     const sanitizedQuizName = quizName.replace(/[^a-zA-Z0-9]/g, '_');
-    
-    // Combine into filename
     const filename = `quiz_results_${sanitizedQuizName}_${formattedDate}.txt`;
     
-    // Use completion time instead of calculating current time
     const minutes = Math.floor(completionTime / 60);
     const seconds = completionTime % 60;
     
-    // Calculate score
-    const score = getQuizStats().correct;
-    const total = shuffledQuestions.length;
-    const percentage = (score / total * 100).toFixed(1);
-
-    // Create content with detailed formatting similar to Python version
+    const stats = getQuizStats();
+    
     let content = "Quiz Results Summary\n";
     content += "==================================================\n\n";
-    
-    // Add quiz name
     content += `Quiz Name: ${quizName}\n`;
     content += `Date: ${formattedDate}\n\n`;
-    
-    // Add score and time information
-    content += `Final Score: ${score}/${total} (${percentage}%)\n`;
+    content += `Final Score: ${stats.correct}/${stats.total} (${stats.percentage}%)\n`;
     content += `Time Taken: ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}\n\n`;
-    
-    // Add detailed analysis section
     content += "Detailed Question Analysis\n";
     content += "==================================================\n\n";
     
-    // Use shuffledQuestions array to maintain the order the user saw
-    shuffledQuestions.forEach((question, index) => {
-      const answer = userAnswers[index];
+    questions.forEach((question, index) => {
+      const userAnswer = userAnswers[index];
       
       content += `Question ${index + 1}:\n`;
       content += `${question.question}\n\n`;
       
-      // Get the actual answer text using the answerMap
-      const userAnswerText = !answer ? "No answer provided" : 
-                          (Array.isArray(answer) 
-                            ? answer.map(id => question.answerMap.get(id)).join(", ")
-                            : question.answerMap.get(answer));
-      
+      // Get user answer text
+      let userAnswerText = "No answer provided";
+      if (userAnswer) {
+        if (Array.isArray(userAnswer)) {
+          userAnswerText = userAnswer.map(idx => 
+            question.shuffledAnswers ? question.shuffledAnswers[idx] : 
+            question.answers ? question.answers[idx] : `Option ${idx+1}`
+          ).join(", ");
+        } else {
+          userAnswerText = question.shuffledAnswers ? question.shuffledAnswers[userAnswer] : 
+                          question.answers ? question.answers[userAnswer] : `Option ${userAnswer+1}`;
+        }
+      }
       content += `Your Answer: ${userAnswerText}\n`;
       
-      // Get correct answer text using the answerMap
-      const correctAnswerText = question.correct
-        .map(id => question.answerMap.get(id))
-        .join(", ");
+      // Get correct answer text
+      let correctAnswerText = "Unknown";
+      if (question.shuffledCorrectIds) {
+        correctAnswerText = question.shuffledCorrectIds.map(idx => 
+          question.shuffledAnswers ? question.shuffledAnswers[idx] : `Option ${idx+1}`
+        ).join(", ");
+      } else if (question.correct && question.answers) {
+        correctAnswerText = question.correct.map(correct => 
+          typeof correct === 'number' ? question.answers[correct] : correct
+        ).join(", ");
+      }
       content += `Correct Answer: ${correctAnswerText}\n`;
       
-      // Status (correct/incorrect/unanswered)
+      // Status
       let status = "Unanswered";
-      if (answer) {
+      if (userAnswer) {
         status = checkAnswer(index) ? 'Correct' : 'Incorrect';
       }
       content += `Status: ${status}\n`;
       
-      // Explanation
       content += `Explanation: ${question.explanation || 'No explanation provided.'}\n`;
-      
-      // Separator between questions
       content += "\n--------------------------------------------------\n\n";
     });
     
-    // Create and download the file
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     
@@ -264,37 +244,51 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
     document.body.appendChild(link);
     link.click();
     
-    // Clean up
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   }
 
-  // Helper function to get display text from unique ID
-  const getAnswerText = (uniqueId) => {
-    return currentQuestion.answerMap?.get(uniqueId) || uniqueId
+  // Get the answer text to display
+  const getAnswerText = (index) => {
+    if (!currentQuestion) return '';
+    
+    // For pre-shuffled data from App.jsx
+    if (currentQuestion.shuffledAnswers) {
+      return currentQuestion.shuffledAnswers[index];
+    }
+    
+    // Fallback for legacy format
+    if (currentQuestion.answers && Array.isArray(currentQuestion.answers)) {
+      if (typeof currentQuestion.answers[index] === 'object') {
+        return currentQuestion.answers[index]?.text || `Option ${index+1}`;
+      }
+      return currentQuestion.answers[index] || `Option ${index+1}`;
+    }
+    
+    return `Option ${index+1}`;
   }
 
+  // Image preview handling
   const handleImageClick = (image) => {
-    setShowImagePreview(image)
+    setShowImagePreview(image);
     
-    // Get the natural dimensions of the image
-    const img = new Image()
+    const img = new Image();
     img.onload = () => {
       setPreviewImageDimensions({
         width: img.naturalWidth,
         height: img.naturalHeight
-      })
-    }
-    img.src = image
+      });
+    };
+    img.src = image;
   }
 
   const closeImagePreview = () => {
-    setShowImagePreview(null)
+    setShowImagePreview(null);
   }
 
-  // Render image thumbnails with hover functionality
+  // Render image thumbnails
   const renderImages = (images) => {
-    if (!images || !Array.isArray(images) || images.length === 0) return null
+    if (!images || !Array.isArray(images) || images.length === 0) return null;
     
     return (
       <div className="quiz-images-container">
@@ -313,7 +307,12 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
           </div>
         ))}
       </div>
-    )
+    );
+  }
+
+  // Early return if no questions are available
+  if (!questions || questions.length === 0) {
+    return <div className="quiz-runner">Loading quiz...</div>;
   }
 
   return (
@@ -346,7 +345,7 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
           )}
         </div>
         <div className="question-grid">
-          {shuffledQuestions.map((_, index) => (
+          {questions.map((_, index) => (
             <button
               key={index}
               className={`question-number ${getQuestionStatus(index)}`}
@@ -393,7 +392,7 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
           <h1 className="quiz-name">{quizName}</h1>
           
           <h2 className={flaggedQuestions.has(currentIndex) ? 'flagged' : ''}>
-            Question {currentIndex + 1} of {shuffledQuestions.length}
+            Question {currentIndex + 1} of {questions.length}
           </h2>
           <p className="question-text">{currentQuestion.question}</p>
           
@@ -401,43 +400,51 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
           {renderImages(currentQuestion.questionImages)}
           
           <div className="options-container">
-            {currentQuestion.answers && currentQuestion.answers.map((uniqueId, idx) => {
-              const isChecked = isMultiple
-                ? (userAnswers[currentIndex] || []).includes(uniqueId)
-                : userAnswers[currentIndex] === uniqueId
-
-              // Get the actual answer text from the unique ID
-              const answerText = getAnswerText(uniqueId)
+            {currentQuestion.shuffledAnswers && currentQuestion.shuffledAnswers.map((answer, idx) => {
+              const isChecked = isMultiple() 
+                ? (userAnswers[currentIndex] || []).includes(idx)
+                : userAnswers[currentIndex] === idx;
               
               // Check if this is a correct answer (for highlighting after submission)
-              const isCorrectAnswer = currentQuestion.correct.includes(uniqueId)
+              const isCorrectAnswer = currentQuestion.shuffledCorrectIds && 
+                                      currentQuestion.shuffledCorrectIds.includes(idx);
 
               return (
                 <label 
-                  key={uniqueId} 
+                  key={idx} 
                   className={`option-label ${isSubmitted && isCorrectAnswer ? 'correct-answer' : ''}`}
                 >
                   <input
-                    type={isMultiple ? 'checkbox' : 'radio'}
+                    type={isMultiple() ? 'checkbox' : 'radio'}
                     name={`question-${currentIndex}`}
-                    value={uniqueId}
+                    value={idx}
                     checked={isChecked}
-                    onChange={() => handleAnswerChange(uniqueId, isMultiple)}
+                    onChange={() => handleAnswerChange(idx, isMultiple())}
                     disabled={isSubmitted}
                   />
-                  <span className="option-text">{answerText}</span>
+                  <span className="option-text">{answer}</span>
                 </label>
-              )
+              );
             })}
           </div>
 
           {isSubmitted && (
             <div className={`results ${checkAnswer(currentIndex) ? 'correct' : 'incorrect'}`}>
-              <p><span className="result-label">Your Answer:</span> {Array.isArray(userAnswers[currentIndex]) 
-                ? userAnswers[currentIndex]?.map(id => getAnswerText(id)).join(', ') 
-                : getAnswerText(userAnswers[currentIndex]) || 'No answer'}</p>
-              <p><span className="result-label">Correct Answer:</span> {currentQuestion.correct.map(id => getAnswerText(id)).join(', ')}</p>
-              <p><span className="result-label">Explanation:</span> {currentQuestion.explanation || 'No explanation provided.'}</p>
+              <p>
+                <span className="result-label">Your Answer:</span> 
+                {Array.isArray(userAnswers[currentIndex]) 
+                  ? userAnswers[currentIndex]?.map(idx => getAnswerText(idx)).join(', ') 
+                  : getAnswerText(userAnswers[currentIndex]) || 'No answer'}
+              </p>
+              <p>
+                <span className="result-label">Correct Answer:</span> 
+                {currentQuestion.shuffledCorrectIds?.map(idx => 
+                  getAnswerText(idx)).join(', ') || 'Unknown'}
+              </p>
+              <p>
+                <span className="result-label">Explanation:</span> 
+                {currentQuestion.explanation || 'No explanation provided.'}
+              </p>
               
               {/* Display explanation images if they exist */}
               {renderImages(currentQuestion.explanationImages)}
@@ -454,7 +461,7 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
           </button>
           <button
             onClick={() => setCurrentIndex(prev => prev + 1)}
-            disabled={currentIndex === shuffledQuestions.length - 1}
+            disabled={currentIndex === questions.length - 1}
           >
             Next
           </button>
@@ -472,8 +479,8 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
                 </button>
                 {!isSubmitted && (
                   <button className="success" onClick={() => {
-                    handleSubmit()
-                    setShowExitWarning(false)
+                    handleSubmit();
+                    setShowExitWarning(false);
                   }}>
                     Grade Now
                   </button>
@@ -500,8 +507,8 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
                   Continue Quiz
                 </button>
                 <button className="success" onClick={() => {
-                  setShowSubmitWarning(false)
-                  handleSubmit()
+                  setShowSubmitWarning(false);
+                  handleSubmit();
                 }}>
                   Submit for Grading
                 </button>
@@ -533,7 +540,7 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
         </div>
       )}
     </div>
-  )
-}
+  );
+};
 
-export default QuizRunner 
+export default QuizRunner; 
