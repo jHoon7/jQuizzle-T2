@@ -1029,4 +1029,10 @@
 .light .navigation {
   background: transparent;
   box-shadow: none;
+}
+
+/* Add this to your existing CSS file */
+.results p .result-label + span {
+  white-space: pre-line;
+  display: inline-block;
 } 

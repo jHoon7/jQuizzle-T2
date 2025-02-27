@@ -447,7 +447,9 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
               </p>
               <p>
                 <span className="result-label">Explanation:</span> 
-                {currentQuestion.explanation || 'No explanation provided.'}
+                <span style={{ whiteSpace: 'pre-line' }}>
+                  {currentQuestion.explanation || 'No explanation provided.'}
+                </span>
               </p>
               
               {/* Display explanation images if they exist */}
