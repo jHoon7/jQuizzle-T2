@@ -1404,167 +1404,80 @@ function App() {
     setCurrentFlashcardDeck(null)
   }
 
-  // Find the handleRunQuiz function and replace it with this updated version
+  // Let's update the handleRunQuiz function to fix the blank screen issue
   const handleRunQuiz = (quizBank) => {
     console.log('Running quiz bank:', quizBank);
     
     try {
-      // Validate quizBank
-      if (!quizBank || typeof quizBank !== 'object') {
-        console.error('Invalid quizBank:', quizBank);
-        throw new Error('Invalid quiz: not an object');
-      }
-
-      // Parse the content with better error handling
+      // Parse the content
       let parsedContent;
       try {
         if (typeof quizBank.content === 'string') {
           parsedContent = JSON.parse(quizBank.content);
-          console.log('Successfully parsed string content');
         } else {
-          console.log('Using quizBank directly as content');
           parsedContent = quizBank;
         }
       } catch (error) {
-        console.error('Error parsing quiz content:', error, 'Raw content type:', typeof quizBank.content);
+        console.error('Error parsing quiz content:', error);
         // If parsing fails, try to use the raw content
         parsedContent = quizBank;
       }
       
       // Get quiz name from filename
-      const quizName = getBaseName(quizBank.name || 'Untitled Quiz');
+      const quizName = getBaseName(quizBank.name);
       console.log('Quiz name:', quizName);
       
-      // Extract the questions from the parsed content with extensive logging
+      // Extract the questions from the parsed content
       let questions = [];
-      if (parsedContent && parsedContent.items && Array.isArray(parsedContent.items)) {
-        console.log('Using items from parsedContent');
+      if (parsedContent && parsedContent.items) {
         questions = parsedContent.items;
       } else if (Array.isArray(parsedContent)) {
-        console.log('Using parsedContent as questions array');
         questions = parsedContent;
-      } else if (quizBank.items && Array.isArray(quizBank.items)) {
-        console.log('Using items directly from quizBank');
+      } else if (quizBank.items) {
         questions = quizBank.items;
-      } else {
-        console.warn('No valid questions array found, using empty array');
       }
       
-      console.log('Raw questions length:', questions.length);
+      console.log('Parsed questions:', questions);
       
-      // Create a completely new array of question objects
-      // WITHOUT using the spread operator to avoid property assignment issues
-      const processedQuestions = [];
-      
-      for (let i = 0; i < questions.length; i++) {
-        const q = questions[i];
-        
-        // Skip non-object questions entirely
-        if (!q || typeof q !== 'object') {
-          console.error(`Skipping invalid question at index ${i}:`, q);
-          continue;
-        }
-        
-        try {
-          // Create a new empty question object
-          const questionObj = {
-            question: '',
-            answers: [],
-            correct: [],
-            explanation: ''
+      // Process questions to ensure correct format
+      const processedQuestions = questions.map(q => {
+        // Make sure correct answers are properly identified
+        if (!q.correct && Array.isArray(q.answers)) {
+          // If correct answers are marked with asterisks
+          const correct = [];
+          const processedAnswers = [];
+          
+          q.answers.forEach(answer => {
+            if (answer.startsWith('*')) {
+              const cleanAnswer = answer.substring(1);
+              processedAnswers.push(cleanAnswer);
+              correct.push(cleanAnswer);
+            } else {
+              processedAnswers.push(answer);
+            }
+          });
+          
+          return {
+            ...q,
+            answers: processedAnswers,
+            correct: correct,
+            explanation: q.explanation || 'No explanation provided.'
           };
-          
-          // Safely copy properties
-          if (typeof q.question === 'string') {
-            questionObj.question = q.question;
-          } else {
-            questionObj.question = `Question ${i + 1}`;
-          }
-          
-          if (typeof q.explanation === 'string') {
-            questionObj.explanation = q.explanation;
-          } else {
-            questionObj.explanation = 'No explanation provided.';
-          }
-          
-          // Process answers carefully
-          if (Array.isArray(q.answers)) {
-            for (let j = 0; j < q.answers.length; j++) {
-              const answer = q.answers[j];
-              
-              if (typeof answer === 'string') {
-                if (answer.startsWith('*')) {
-                  const cleanAnswer = answer.substring(1);
-                  questionObj.answers.push(cleanAnswer);
-                  questionObj.correct.push(cleanAnswer);
-                } else {
-                  questionObj.answers.push(answer);
-                }
-              } else {
-                console.warn(`Skipping non-string answer at question ${i}, answer ${j}`);
-              }
-            }
-          }
-          
-          // If we have a pre-existing correct array, use it
-          if (Array.isArray(q.correct) && q.correct.length > 0) {
-            questionObj.correct = [];
-            // Only copy string values
-            for (let j = 0; j < q.correct.length; j++) {
-              if (typeof q.correct[j] === 'string') {
-                questionObj.correct.push(q.correct[j]);
-              }
-            }
-          }
-          
-          // Make sure we have at least one correct answer
-          if (questionObj.correct.length === 0 && questionObj.answers.length > 0) {
-            questionObj.correct = [questionObj.answers[0]];
-          }
-          
-          // Safely copy image arrays
-          if (Array.isArray(q.questionImages)) {
-            questionObj.questionImages = [];
-            for (let j = 0; j < q.questionImages.length; j++) {
-              if (typeof q.questionImages[j] === 'string') {
-                questionObj.questionImages.push(q.questionImages[j]);
-              }
-            }
-          }
-          
-          if (Array.isArray(q.answersImages)) {
-            questionObj.answersImages = [];
-            for (let j = 0; j < q.answersImages.length; j++) {
-              if (typeof q.answersImages[j] === 'string') {
-                questionObj.answersImages.push(q.answersImages[j]);
-              }
-            }
-          }
-          
-          if (Array.isArray(q.explanationImages)) {
-            questionObj.explanationImages = [];
-            for (let j = 0; j < q.explanationImages.length; j++) {
-              if (typeof q.explanationImages[j] === 'string') {
-                questionObj.explanationImages.push(q.explanationImages[j]);
-              }
-            }
-          }
-          
-          // Add this fully validated question to our results
-          processedQuestions.push(questionObj);
-        } catch (err) {
-          console.error(`Error processing question ${i}:`, err);
-          // Continue to next question
         }
-      }
+        
+        // If the question is already properly formatted
+        return {
+          ...q,
+          explanation: q.explanation || 'No explanation provided.'
+        };
+      });
       
       // Check if we have valid questions
-      if (processedQuestions.length === 0) {
-        console.error('No valid questions after processing');
+      if (!processedQuestions || processedQuestions.length === 0) {
         throw new Error('No valid questions found in the quiz');
       }
       
-      console.log(`Successfully processed ${processedQuestions.length} questions`);
+      console.log('Processed questions for quiz runner:', processedQuestions);
       
       // Set up the quiz runner
       setCurrentQuestions(processedQuestions);
