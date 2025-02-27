@@ -1437,10 +1437,19 @@ function App() {
         questions = quizBank.items;
       }
       
-      console.log('Parsed questions:', questions);
+      console.log('Raw parsed questions:', questions);
+      
+      // Filter out non-objects and log invalid entries
+      const validQuestions = questions.filter(q => {
+        if (typeof q !== 'object' || q === null) {
+          console.warn('Invalid question detected:', q);
+          return false;
+        }
+        return true;
+      });
       
       // Process questions to ensure correct format
-      const processedQuestions = questions.map(q => {
+      const processedQuestions = validQuestions.map(q => {
         // Make sure correct answers are properly identified
         if (!q.correct && Array.isArray(q.answers)) {
           // If correct answers are marked with asterisks
@@ -1448,11 +1457,11 @@ function App() {
           const processedAnswers = [];
           
           q.answers.forEach(answer => {
-            if (answer.startsWith('*')) {
+            if (typeof answer === 'string' && answer.startsWith('*')) {
               const cleanAnswer = answer.substring(1);
               processedAnswers.push(cleanAnswer);
               correct.push(cleanAnswer);
-            } else {
+            } else if (typeof answer === 'string') {
               processedAnswers.push(answer);
             }
           });
