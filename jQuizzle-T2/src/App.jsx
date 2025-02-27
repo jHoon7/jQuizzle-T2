@@ -1404,7 +1404,7 @@ function App() {
     setCurrentFlashcardDeck(null)
   }
 
-  // Find the handleRunQuiz function and replace it with this updated version
+  // Let's update the handleRunQuiz function to fix the blank screen issue
   const handleRunQuiz = (quizBank) => {
     console.log('Running quiz bank:', quizBank);
     
@@ -1440,63 +1440,36 @@ function App() {
       console.log('Parsed questions:', questions);
       
       // Process questions to ensure correct format
-      const processedQuestions = questions.map((q, index) => {
-        // Make sure q is an object
-        if (!q || typeof q !== 'object') {
-          console.error(`Question at index ${index} is not an object:`, q);
+      const processedQuestions = questions.map(q => {
+        // Make sure correct answers are properly identified
+        if (!q.correct && Array.isArray(q.answers)) {
+          // If correct answers are marked with asterisks
+          const correct = [];
+          const processedAnswers = [];
+          
+          q.answers.forEach(answer => {
+            if (answer.startsWith('*')) {
+              const cleanAnswer = answer.substring(1);
+              processedAnswers.push(cleanAnswer);
+              correct.push(cleanAnswer);
+            } else {
+              processedAnswers.push(answer);
+            }
+          });
+          
           return {
-            question: `Invalid question format at position ${index + 1}`,
-            answers: ["Option 1", "Option 2"],
-            correct: ["Option 1"],
-            explanation: "This question has an invalid format."
+            ...q,
+            answers: processedAnswers,
+            correct: correct,
+            explanation: q.explanation || 'No explanation provided.'
           };
         }
         
-        // Create a new object rather than modifying the original
-        const questionObj = {
-          question: q.question || `Question ${index + 1}`,
-          answers: [],
-          correct: [],
+        // If the question is already properly formatted
+        return {
+          ...q,
           explanation: q.explanation || 'No explanation provided.'
         };
-        
-        // Process answers more defensively
-        if (Array.isArray(q.answers)) {
-          q.answers.forEach(answer => {
-            if (typeof answer === 'string') {
-              if (answer.startsWith('*')) {
-                const cleanAnswer = answer.substring(1);
-                questionObj.answers.push(cleanAnswer);
-                questionObj.correct.push(cleanAnswer);
-              } else {
-                questionObj.answers.push(answer);
-              }
-            }
-          });
-        }
-        
-        // If the question already has a correct array, use it
-        if (Array.isArray(q.correct) && q.correct.length > 0) {
-          questionObj.correct = q.correct;
-        }
-        
-        // Make sure we have at least one correct answer
-        if (questionObj.correct.length === 0 && questionObj.answers.length > 0) {
-          questionObj.correct = [questionObj.answers[0]];
-        }
-        
-        // Copy over any image arrays if they exist
-        if (Array.isArray(q.questionImages)) {
-          questionObj.questionImages = [...q.questionImages];
-        }
-        if (Array.isArray(q.answersImages)) {
-          questionObj.answersImages = [...q.answersImages];
-        }
-        if (Array.isArray(q.explanationImages)) {
-          questionObj.explanationImages = [...q.explanationImages];
-        }
-        
-        return questionObj;
       });
       
       // Check if we have valid questions
