@@ -248,7 +248,7 @@ const PracticeModeRunner = ({ questions, quizName, onClose, isDarkMode, onThemeT
           </div>
           
           <div className="practice-progress-info">
-            <div>Score: {score}/{questionsAnswered}</div>
+            <div>Score: {score}/{questionsAnswered} ({questionsAnswered > 0 ? Math.round((score / questionsAnswered) * 100) : 0}%)</div>
             <div>
               Question {currentIndex + 1} of {questions.length}
             </div>
