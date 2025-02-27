@@ -1437,19 +1437,10 @@ function App() {
         questions = quizBank.items;
       }
       
-      console.log('Raw parsed questions:', questions);
-      
-      // Filter out non-objects and log invalid entries
-      const validQuestions = questions.filter(q => {
-        if (typeof q !== 'object' || q === null) {
-          console.warn('Invalid question detected:', q);
-          return false;
-        }
-        return true;
-      });
+      console.log('Parsed questions:', questions);
       
       // Process questions to ensure correct format
-      const processedQuestions = validQuestions.map(q => {
+      const processedQuestions = questions.map(q => {
         // Make sure correct answers are properly identified
         if (!q.correct && Array.isArray(q.answers)) {
           // If correct answers are marked with asterisks
@@ -1457,11 +1448,11 @@ function App() {
           const processedAnswers = [];
           
           q.answers.forEach(answer => {
-            if (typeof answer === 'string' && answer.startsWith('*')) {
+            if (answer.startsWith('*')) {
               const cleanAnswer = answer.substring(1);
               processedAnswers.push(cleanAnswer);
               correct.push(cleanAnswer);
-            } else if (typeof answer === 'string') {
+            } else {
               processedAnswers.push(answer);
             }
           });
@@ -1486,55 +1477,10 @@ function App() {
         throw new Error('No valid questions found in the quiz');
       }
       
-      // Shuffle the questions
-      const shuffledQuestions = [...processedQuestions].sort(() => Math.random() - 0.5);
+      console.log('Processed questions for quiz runner:', processedQuestions);
       
-      // For each question, shuffle the answers and create an array of answer objects
-      // with IDs to track them
-      const questionsWithShuffledAnswers = shuffledQuestions.map(q => {
-        // Only process if it has answers
-        if (Array.isArray(q.answers) && q.answers.length > 0) {
-          // Create answer objects with IDs
-          const answersWithIds = q.answers.map((answer, idx) => ({
-            id: idx,
-            text: answer,
-          }));
-          
-          // Create an array of correct IDs
-          const correctIds = [];
-          if (Array.isArray(q.correct)) {
-            q.correct.forEach(correctAnswer => {
-              const idx = q.answers.findIndex(a => a === correctAnswer);
-              if (idx !== -1) {
-                correctIds.push(idx);
-              }
-            });
-          }
-          
-          // Shuffle the answers
-          const shuffledAnswers = [...answersWithIds].sort(() => Math.random() - 0.5);
-          
-          // Map the shuffled IDs to the original correct IDs
-          const shuffledCorrectIds = shuffledAnswers
-            .filter(a => correctIds.includes(a.id))
-            .map(a => shuffledAnswers.findIndex(sa => sa.id === a.id));
-          
-          // Return the question with shuffled answers
-          return {
-            ...q,
-            originalAnswers: q.answers,
-            shuffledAnswers: shuffledAnswers.map(a => a.text),
-            shuffledCorrectIds: shuffledCorrectIds,
-          };
-        }
-        
-        return q;
-      });
-      
-      console.log('Processed and shuffled questions for quiz runner:', questionsWithShuffledAnswers);
-      
-      // Set up the quiz runner with pre-shuffled questions
-      setCurrentQuestions(questionsWithShuffledAnswers);
+      // Set up the quiz runner
+      setCurrentQuestions(processedQuestions);
       setCurrentQuizName(quizName);
       setShowQuizRunner(true);
     } catch (error) {
