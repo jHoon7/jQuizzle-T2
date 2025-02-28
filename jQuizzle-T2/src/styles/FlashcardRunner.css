@@ -153,6 +153,11 @@
   z-index: 5;
 }
 
+/* Override border color for light mode */
+.light .card-number.current {
+  box-shadow: 0 0 0 2px black;
+}
+
 .flashcard-content {
   flex: 1;
   padding: 40px;

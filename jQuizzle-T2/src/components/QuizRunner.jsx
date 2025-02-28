@@ -352,7 +352,7 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
           {questions.map((_, index) => (
             <button
               key={index}
-              className={`question-number ${getQuestionStatus(index)}`}
+              className={`question-number ${getQuestionStatus(index)} ${index === currentIndex ? 'active' : ''}`}
               onClick={() => setCurrentIndex(index)}
             >
               {index + 1}
@@ -414,20 +414,14 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
                                       currentQuestion.shuffledCorrectIds.includes(idx);
 
               return (
-                <label 
+                <button 
                   key={idx} 
-                  className={`option-label ${isSubmitted && isCorrectAnswer ? 'correct-answer' : ''}`}
+                  className={`option-label ${isChecked ? 'selected' : ''} ${isSubmitted && isCorrectAnswer ? 'correct-answer' : ''}`}
+                  onClick={() => handleAnswerChange(idx, isMultiple())}
+                  disabled={isSubmitted}
                 >
-                  <input
-                    type={isMultiple() ? 'checkbox' : 'radio'}
-                    name={`question-${currentIndex}`}
-                    value={idx}
-                    checked={isChecked}
-                    onChange={() => handleAnswerChange(idx, isMultiple())}
-                    disabled={isSubmitted}
-                  />
                   <span className="option-text">{answer}</span>
-                </label>
+                </button>
               );
             })}
           </div>

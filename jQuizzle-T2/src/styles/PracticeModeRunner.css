@@ -152,9 +152,26 @@ html, body {
 }
 
 .practice-question-button.active {
-  border: 2px solid var(--primary-color);
-  transform: scale(1.1);
-  z-index: 1;
+  border: 2px solid var(--text-color) !important;
+}
+
+.practice-question-button.active.correct {
+  border: 2px solid white !important;
+}
+
+.practice-question-button.active.incorrect {
+  border: 2px solid white !important;
+}
+
+.practice-question-button.active.answered {
+  border: 2px solid white !important;
+}
+
+/* For light mode, override the border color */
+.light .practice-question-button.active.correct,
+.light .practice-question-button.active.incorrect,
+.light .practice-question-button.active.answered {
+  border: 2px solid black !important;
 }
 
 .practice-question-button.correct {
@@ -360,7 +377,7 @@ html, body {
 .practice-actions-container {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 2rem;
   margin-top: 1rem;
   padding-top: 1rem;
   width: 100%;
@@ -386,7 +403,7 @@ html, body {
 .practice-navigation-buttons {
   display: flex;
   justify-content: center;
-  gap: 2rem;
+  gap: 4rem;
   width: 100%;
   box-sizing: border-box;
 }
