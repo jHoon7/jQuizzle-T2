@@ -2010,3 +2010,13 @@ body:has(.practice-mode-overlay) {
 .bottom-controls-container > * {
   border: none;
 }
+
+.version-number {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  opacity: 0.7;
+  font-family: monospace;
+}
