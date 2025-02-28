@@ -1884,7 +1884,7 @@ function App() {
                 {message}
               </div>
               <h1>jQuizzle-T2</h1>
-              <div className="version-number">v2.5</div>
+              <div className="version-number">v2.6</div>
             </>
           )}
           
