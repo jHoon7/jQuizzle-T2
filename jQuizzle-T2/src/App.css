@@ -1058,6 +1058,12 @@ p {
   min-width: 25px;
 }
 
+/* Add specific styling for question numbers in light mode */
+.light .question-number {
+  color: var(--text-primary); /* Ensure text is dark in light mode */
+  font-weight: bold; /* Make it bold for better visibility */
+}
+
 .question-preview {
   flex: 1;
   white-space: nowrap;
