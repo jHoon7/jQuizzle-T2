@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import '../styles/QuizRunner.css'
 
-const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle }) => {
+const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle, onItemComplete }) => {
   // Basic state setup
   const [currentIndex, setCurrentIndex] = useState(0)
   const [userAnswers, setUserAnswers] = useState([])
@@ -47,20 +47,23 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
 
   // Handle user answer selection
   const handleAnswerChange = (answerIndex, isMultipleChoice) => {
-    setUserAnswers(prev => {
-      const newAnswers = [...prev]
-      if (isMultipleChoice) {
-        const currentAnswer = prev[currentIndex] || []
-        if (currentAnswer.includes(answerIndex)) {
-          newAnswers[currentIndex] = currentAnswer.filter(a => a !== answerIndex)
-        } else {
-          newAnswers[currentIndex] = [...currentAnswer, answerIndex]
-        }
+    const newUserAnswers = [...userAnswers]
+    
+    if (isMultipleChoice) {
+      // For multiple choice, toggle the selected answer
+      if (!newUserAnswers[currentIndex]) {
+        newUserAnswers[currentIndex] = [answerIndex]
+      } else if (newUserAnswers[currentIndex].includes(answerIndex)) {
+        newUserAnswers[currentIndex] = newUserAnswers[currentIndex].filter(a => a !== answerIndex)
       } else {
-        newAnswers[currentIndex] = answerIndex
+        newUserAnswers[currentIndex] = [...newUserAnswers[currentIndex], answerIndex]
       }
-      return newAnswers
-    })
+    } else {
+      // For single choice, just set the answer
+      newUserAnswers[currentIndex] = [answerIndex]
+    }
+    
+    setUserAnswers(newUserAnswers)
   }
 
   // Toggle flagged state of current question
@@ -78,9 +81,18 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
 
   // Handle quiz submission
   const handleSubmit = () => {
-    clearInterval(timerRef.current)
     setIsSubmitted(true)
-    setCompletionTime(Math.floor((Date.now() - startTime) / 1000))
+    setCompletionTime(elapsedTime)
+    
+    // Call onItemComplete only for questions that the user answered
+    if (onItemComplete) {
+      const answeredCount = userAnswers.filter(answer => answer && answer.length > 0).length
+      
+      // Increment the completion count only for answered questions
+      for (let i = 0; i < answeredCount; i++) {
+        onItemComplete()
+      }
+    }
   }
 
   // Determine question status (unanswered, answered, flagged, correct, incorrect)
@@ -405,9 +417,10 @@ const QuizRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle })
           
           <div className="options-container">
             {currentQuestion.shuffledAnswers && currentQuestion.shuffledAnswers.map((answer, idx) => {
-              const isChecked = isMultiple() 
-                ? (userAnswers[currentIndex] || []).includes(idx)
-                : userAnswers[currentIndex] === idx;
+              // Fix the isChecked calculation to properly detect selected answers
+              const isChecked = Array.isArray(userAnswers[currentIndex]) 
+                ? userAnswers[currentIndex]?.includes(idx)
+                : false;
               
               // Check if this is a correct answer (for highlighting after submission)
               const isCorrectAnswer = currentQuestion.shuffledCorrectIds && 

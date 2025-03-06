@@ -2,9 +2,11 @@ import { useState, useRef, useEffect, Component } from 'react'
 import './App.css'
 import toothLogo from './assets/tooth-logo.svg'
 import topGumLogo from './assets/top-gum-logo.svg'
+import arcadeLogo from './assets/arcade-logo.svg'
 import QuizRunner from './components/QuizRunner'
 import FlashcardRunner from './components/FlashcardRunner'
 import PracticeModeRunner from './components/PracticeModeRunner'
+import ArcadeScreen from './components/ArcadeScreen'
 
 // Move ConfirmationModal outside of App component
 const ConfirmationModal = ({ onConfirm, onCancel, onDiscard }) => {
@@ -61,14 +63,12 @@ const WarningModal = ({ message, onConfirm, onCancel, showCancel = false, confir
               Back
             </button>
           )}
-          {onConfirm && (
-            <button 
-              className="warning-button primary"
-              onClick={onConfirm}
-            >
-              {confirmText}
-            </button>
-          )}
+          <button 
+            className="warning-button primary"
+            onClick={onConfirm || onCancel}
+          >
+            {confirmText}
+          </button>
         </div>
       </div>
     </div>
@@ -90,9 +90,18 @@ const ExpandedInput = ({ inputId, content, onClose }) => {
     const originalInput = document.getElementById(inputId)
     if (originalInput) {
       originalInput.value = expandedContent
-      // Trigger a change event to update state
-      const event = new Event('change', { bubbles: true })
-      originalInput.dispatchEvent(event)
+      
+      // Trigger both input and change events to ensure all handlers are called
+      const inputEvent = new Event('input', { bubbles: true })
+      originalInput.dispatchEvent(inputEvent)
+      
+      const changeEvent = new Event('change', { bubbles: true })
+      originalInput.dispatchEvent(changeEvent)
+      
+      // Also explicitly call checkContentChanges to ensure state is updated
+      if (typeof window.checkContentChanges === 'function') {
+        window.checkContentChanges(expandedContent, inputId)
+      }
     }
     onClose()
   }
@@ -119,6 +128,57 @@ const ExpandedInput = ({ inputId, content, onClose }) => {
           onChange={handleContentChange}
         />
         <div className="expanded-controls">
+          {inputId === 'side2' && (
+            <span className="correct-answer-hint expanded-hint">
+              Mark correct answer(s) with a 
+              <button 
+                className="mark-correct-button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  // Similar logic to handleMarkCorrectAnswer but for the expanded textarea
+                  const textarea = document.getElementById('expanded-textarea');
+                  if (!textarea) return;
+                  
+                  const cursorPos = textarea.selectionStart;
+                  const text = textarea.value;
+                  
+                  // Find the start of the current line
+                  let lineStart = cursorPos;
+                  while (lineStart > 0 && text[lineStart - 1] !== '\n') {
+                    lineStart--;
+                  }
+                  
+                  // Check if the line already starts with an asterisk
+                  const currentLine = text.substring(lineStart);
+                  const trimmedLine = currentLine.trimStart();
+                  if (trimmedLine.startsWith('*')) {
+                    return; // Line already marked as correct
+                  }
+                  
+                  // Calculate leading spaces
+                  const leadingSpaces = currentLine.length - trimmedLine.length;
+                  
+                  // Insert asterisk after leading spaces
+                  const beforeLine = text.substring(0, lineStart + leadingSpaces);
+                  const afterSpaces = text.substring(lineStart + leadingSpaces);
+                  const updatedText = beforeLine + '*' + afterSpaces;
+                  
+                  // Update textarea value and state
+                  textarea.value = updatedText;
+                  setExpandedContent(updatedText);
+                  
+                  // Position cursor after the asterisk
+                  const newCursorPos = lineStart + leadingSpaces + 1;
+                  textarea.setSelectionRange(newCursorPos, newCursorPos);
+                  textarea.focus();
+                }}
+                title="Mark current line as correct answer"
+              >
+                *
+              </button>
+              in front
+            </span>
+          )}
           <button className="expanded-button expanded-back" onClick={handleClose}>
             Back
           </button>
@@ -163,7 +223,11 @@ class ErrorBoundary extends Component {
 }
 
 function App() {
-  const [mode, setMode] = useState(null)
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark')
+  const [mode, setMode] = useState('home')
+  const [selectedQuizBank, setSelectedQuizBank] = useState(null)
+  const [selectedFlashcardDeck, setSelectedFlashcardDeck] = useState(null)
+  const [isAnswerOptionsFocused, setIsAnswerOptionsFocused] = useState(false)
   const [showCreateOptions, setShowCreateOptions] = useState(false)
   const [createType, setCreateType] = useState(null)
   const [activeTab, setActiveTab] = useState('quiz')
@@ -209,6 +273,8 @@ function App() {
   const questionImageInputRef = useRef(null)
   const answerImageInputRef = useRef(null)
   const explanationImageInputRef = useRef(null)
+  const importQuestionsRef = useRef(null)
+  const importItemsRef = useRef(null)
   const [showQuizRunner, setShowQuizRunner] = useState(false)
   const fileInputRef = useRef(null)
   const [currentQuizName, setCurrentQuizName] = useState('')
@@ -222,6 +288,19 @@ function App() {
   const [currentFlashcardDeck, setCurrentFlashcardDeck] = useState(null)
   const [isPracticeModeEnabled, setIsPracticeModeEnabled] = useState(false)
   const [showPracticeModeRunner, setShowPracticeModeRunner] = useState(false)
+  // Add new state for arcade feature
+  /* ==========================================
+  FEATURE_DISABLED: ARCADE_COUNTER
+  Temporarily setting to 100 to bypass completion threshold requirement.
+  This is part of the arcade feature set that's currently disabled.
+  TODO: Reset to 0 for production/release to enforce completion requirement when re-enabling arcade features.
+  ========================================== */
+  const [completionCount, setCompletionCount] = useState(100)
+  const [showArcade, setShowArcade] = useState(false)
+  // Add a new state for the arcade message
+  const [showArcadeMessage, setShowArcadeMessage] = useState(false);
+  // Add new state for flashcard starting side
+  const [flashcardStartSide, setFlashcardStartSide] = useState('A');
 
   const handleCreateOption = (type) => {
     setCreateType(type)
@@ -258,6 +337,99 @@ function App() {
     return content1.trim() === content2.trim()
   }
 
+  // Add a function to determine content type based on structure rather than filename
+  const determineContentType = (content) => {
+    try {
+      // Check if it's a JSON file
+      if (content.trim().startsWith('{')) {
+        const parsed = JSON.parse(content)
+        // If type is explicitly defined in the JSON, trust that
+        if (parsed.type) {
+          return parsed.type
+        }
+        
+        // If there are items, check the first item's structure
+        if (parsed.items && Array.isArray(parsed.items) && parsed.items.length > 0) {
+          const firstItem = parsed.items[0]
+          if (firstItem.question && (firstItem.answers || Array.isArray(firstItem.answers))) {
+            return 'quiz'
+          } else if (firstItem.side1 && firstItem.side2) {
+            return 'flashcard'
+          }
+        }
+        
+        // Check for single item format
+        if (parsed.question && (parsed.answers || Array.isArray(parsed.answers))) {
+          return 'quiz'
+        } else if (parsed.side1 && parsed.side2) {
+          return 'flashcard'
+        }
+      }
+      
+      // Check for CSV format
+      if (content.trim().toLowerCase().startsWith('question,') || 
+          content.trim().toLowerCase().includes('\nquestion,')) {
+        return 'quiz'
+      }
+      
+      if (content.trim().toLowerCase().startsWith('front,') || 
+          content.trim().toLowerCase().includes('\nfront,')) {
+        return 'flashcard'
+      }
+      
+      // Check for TXT format by analyzing structure
+      const normalizedContent = content.replace(/\r\n/g, '\n').trim()
+      const blocks = normalizedContent.split('\n\n').filter(block => block.includes('\n=\n'))
+      
+      if (blocks.length > 0) {
+        // Analyze the first block to determine structure
+        const parts = blocks[0].split('\n=\n')
+        if (parts.length === 2) {
+          // See if this looks like a quiz (check for multiple answers and possibly an explanation)
+          const potentialAnswerSection = parts[1].split('\n==\n')[0]
+          const answerLines = potentialAnswerSection.split('\n').filter(line => line.trim())
+          
+          // If we have multiple lines in the answer section, it's more likely a quiz
+          if (answerLines.length > 1 || parts[1].includes('\n==\n')) {
+            return 'quiz'
+          } else {
+            return 'flashcard'
+          }
+        }
+      }
+      
+      // Remove circular dependency on parseQuizContent and parseFlashContent
+      // Instead, use pattern matching to make a best guess
+      
+      // Look for quiz-like patterns
+      if (content.includes('\n==\n') || 
+          content.toLowerCase().includes('answer') || 
+          content.toLowerCase().includes('explanation') ||
+          content.toLowerCase().includes('options')) {
+        return 'quiz'
+      }
+      
+      // Look for flashcard-like patterns
+      if (content.toLowerCase().includes('front') && content.toLowerCase().includes('back') ||
+          content.toLowerCase().includes('term') && content.toLowerCase().includes('definition')) {
+        return 'flashcard'
+      }
+      
+      // If nothing else works, use a heuristic based on the format
+      // Single blocks with a simple = separator are more likely flashcards
+      // Multiple blocks with complex structure are more likely quizzes
+      if (blocks.length > 2) {
+        return 'quiz'
+      }
+      
+      // Default to quiz as a safe fallback
+      return 'quiz'
+    } catch (e) {
+      console.error('Error determining content type:', e)
+      return 'quiz' // Default to quiz as fallback
+    }
+  }
+
   const handleFileDrop = async (files) => {
     for (const file of files) {
       const content = await file.text()
@@ -288,8 +460,9 @@ function App() {
           }
         } else {
           // Handle txt and csv files
-          const fileName = file.name.toLowerCase()
-          const isQuiz = fileName.includes('quiz')
+          // Determine type by content structure, not filename
+          const contentType = determineContentType(content)
+          const isQuiz = contentType === 'quiz'
           const items = isQuiz ? parseQuizContent(content) : parseFlashContent(content)
           
           if (items.length === 0) {
@@ -299,7 +472,7 @@ function App() {
           // Create standardized content
           const standardizedContent = {
             type: isQuiz ? 'quiz' : 'flashcard',
-            name: getBaseName(fileName),
+            name: getBaseName(file.name),
             items: items
           }
 
@@ -376,32 +549,94 @@ function App() {
       return
     }
     
-    // Handle based on item type
-    const itemName = selectedItem.name.toLowerCase();
-    console.log('Selected item name:', itemName);
-    
-    // Check if it's a quiz
-    if (activeTab === 'quiz' || 
-        itemName.includes('_quiz') || 
-        itemName.includes('quiz_')) {
-      console.log('Loading quiz:', selectedItem);
-      handleRunQuiz(selectedItem);
-    } 
-    // Check if it's a flashcard deck
-    else if (activeTab === 'flashcard' || 
-            itemName.includes('_flash') || 
-            itemName.includes('flash_') || 
-            itemName.includes('_deck') || 
-            itemName.includes('deck_')) {
-      console.log('Loading flashcard deck:', selectedItem);
-      handleFlashcardDeckLaunch(selectedItem);
-    }
-    else {
-      console.log('Unable to determine item type:', selectedItem);
-      // Show a message indicating we can't determine the type
+    try {
+      // First check the active tab as a hint
+      if (activeTab === 'quiz') {
+        console.log('Loading quiz from active tab:', selectedItem);
+        handleRunQuiz(selectedItem);
+        return;
+      } else if (activeTab === 'flashcard') {
+        console.log('Loading flashcard deck from active tab:', selectedItem);
+        handleFlashcardDeckLaunch(selectedItem);
+        return;
+      }
+      
+      // If we're not in a specific tab, determine the type from the content
+      if (selectedItem.content) {
+        // Parse content if it's a string (which it likely is)
+        let contentToAnalyze = selectedItem.content;
+        try {
+          if (typeof contentToAnalyze === 'string') {
+            // Try to parse as JSON first
+            const parsed = JSON.parse(contentToAnalyze);
+            // If it has an explicit type property, use that
+            if (parsed.type) {
+              if (parsed.type === 'quiz') {
+                console.log('Loading quiz based on JSON type property:', selectedItem);
+                handleRunQuiz(selectedItem);
+              } else {
+                console.log('Loading flashcard deck based on JSON type property:', selectedItem);
+                handleFlashcardDeckLaunch(selectedItem);
+              }
+              return;
+            }
+            // Otherwise, analyze the raw content
+          }
+        } catch (e) {
+          // If parsing fails, just use the raw content
+          console.log('Content parsing failed, using raw content:', e);
+        }
+
+        const contentType = determineContentType(contentToAnalyze);
+        
+        if (contentType === 'quiz') {
+          console.log('Loading quiz based on content analysis:', selectedItem);
+          handleRunQuiz(selectedItem);
+        } else {
+          console.log('Loading flashcard deck based on content analysis:', selectedItem);
+          handleFlashcardDeckLaunch(selectedItem);
+        }
+        return;
+      }
+      
+      // Fallback to name only if content isn't available
+      const itemName = selectedItem.name.toLowerCase();
+      console.log('Selected item name:', itemName);
+      
+      // Check if it's a quiz based on filename (fallback only)
+      if (itemName.includes('_quiz') || itemName.includes('quiz_')) {
+        console.log('Loading quiz based on filename (fallback):', selectedItem);
+        handleRunQuiz(selectedItem);
+      } 
+      // Check if it's a flashcard deck based on filename (fallback only)
+      else if (itemName.includes('_flash') || itemName.includes('flash_') || 
+               itemName.includes('_deck') || itemName.includes('deck_')) {
+        console.log('Loading flashcard deck based on filename (fallback):', selectedItem);
+        handleFlashcardDeckLaunch(selectedItem);
+      } else {
+        // If we can't determine the type
+        console.log('Unable to determine item type:', selectedItem);
+        if (!isMessageChanging) {
+          setIsMessageChanging(true)
+          setMessage("Unable to determine item type. Please select from the correct tab.")
+          setIsMessageFading(false)
+          
+          setTimeout(() => {
+            setIsMessageFading(true)
+            setTimeout(() => {
+              setMessage("Click Me to Get Smarter!")
+              setIsMessageFading(false)
+              setIsMessageChanging(false)
+            }, 1000)
+          }, 3000)
+        }
+      }
+    } catch (e) {
+      console.error('Error handling tooth click:', e);
+      // Show an error message
       if (!isMessageChanging) {
         setIsMessageChanging(true)
-        setMessage("Unable to determine item type. Try renaming it with _quiz or _deck suffix.")
+        setMessage("Error launching item. Try selecting it again.")
         setIsMessageFading(false)
         
         setTimeout(() => {
@@ -421,7 +656,8 @@ function App() {
       // For comparing names, remove all spaces and normalize to lowercase
       return filename
         .replace(/\s+/g, '')  // Remove all spaces
-        .replace(/[_-](?:quiz|flash|deck)\.(txt|csv|jqz)$/i, '') // Added 'deck' to the pattern
+        .replace(/[_-](?:quiz|flash|deck)\.(txt|csv|jqz)$/i, '') // First try to remove with type suffix
+        .replace(/\.(txt|csv|jqz)$/i, '') // Also remove plain extensions without type suffix
         .trim()
         .toLowerCase()  // Case insensitive comparison
     }
@@ -429,7 +665,8 @@ function App() {
     // For display/general use, just remove the type suffix and extension
     // but preserve the original case
     return filename
-      .replace(/[_-](?:quiz|flash|deck)\.(txt|csv|jqz)$/i, '') // Added 'deck' to the pattern
+      .replace(/[_-](?:quiz|flash|deck)\.(txt|csv|jqz)$/i, '') // First try to remove with type suffix
+      .replace(/\.(txt|csv|jqz)$/i, '') // Also remove plain extensions without type suffix
       .trim()
   }
 
@@ -977,11 +1214,16 @@ function App() {
               currentItem.question = newContent
               contentChanged = true
             } else if (inputId === 'side2') {
-              const newAnswers = newContent.split('\n').filter(a => a.trim())
+              // Split by newlines and preserve all non-empty lines
+              const newAnswers = newContent.split('\n').filter(a => a.trim().length > 0)
               
-              // Update the answers without showing warnings
-              // (Warnings will be shown when saving or adding a new question)
-              if (JSON.stringify(currentItem.answers) !== JSON.stringify(newAnswers)) {
+              // Check if the answers have changed
+              const currentAnswers = currentItem.answers || [];
+              const answersChanged = 
+                newAnswers.length !== currentAnswers.length || 
+                newAnswers.some((answer, idx) => answer !== currentAnswers[idx]);
+              
+              if (answersChanged) {
                 currentItem.answers = newAnswers
                 contentChanged = true
               }
@@ -1061,28 +1303,34 @@ function App() {
   const handleRemoveQuestion = () => {
     if (selectedQuestionIndices.size === 0) return
     
-    const confirmDelete = window.confirm(
-      `Are you sure you want to delete ${selectedQuestionIndices.size} ${createType === 'Quiz' ? 'question' : 'card'}${selectedQuestionIndices.size > 1 ? 's' : ''}?`
-    )
+    const itemType = createType === 'Quiz' ? 'question' : 'card'
+    const message = `Are you sure you want to delete ${selectedQuestionIndices.size} ${itemType}${selectedQuestionIndices.size > 1 ? 's' : ''}?`
     
-    if (confirmDelete) {
-      setCurrentQuestions(prev => {
-        const updated = prev.filter((_, index) => !selectedQuestionIndices.has(index))
-        setHasChanges(true)
-        setSelectedQuestionIndices(new Set())
-        
-        // Clear input fields
-        const side1Input = document.getElementById('side1')
-        const side2Input = document.getElementById('side2')
-        const explanationInput = document.getElementById('explanation')
-        
-        if (side1Input) side1Input.value = ''
-        if (side2Input) side2Input.value = ''
-        if (explanationInput) explanationInput.value = ''
-        
-        return updated
-      })
-    }
+    showWarning(
+      message,
+      () => {
+        setCurrentQuestions(prev => {
+          const updated = prev.filter((_, index) => !selectedQuestionIndices.has(index))
+          setHasChanges(true)
+          setSelectedQuestionIndices(new Set())
+          
+          // Clear input fields
+          const side1Input = document.getElementById('side1')
+          const side2Input = document.getElementById('side2')
+          const explanationInput = document.getElementById('explanation')
+          
+          if (side1Input) side1Input.value = ''
+          if (side2Input) side2Input.value = ''
+          if (explanationInput) explanationInput.value = ''
+          
+          return updated
+        })
+        setShowWarningModal(false)
+      },
+      true, // Show cancel button
+      'Delete', // Custom confirm text
+      () => setShowWarningModal(false) // Cancel callback
+    )
   }
 
   const handleImageUpload = async (event, field) => {
@@ -1205,6 +1453,36 @@ function App() {
       document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [showCreateOptions])
+
+  // Add keyboard event listener for DEL key
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Delete') {
+        // Check if the active element is an input field
+        const activeElement = document.activeElement;
+        const isInputField = activeElement.tagName === 'INPUT' || 
+                             activeElement.tagName === 'TEXTAREA' || 
+                             activeElement.isContentEditable;
+        
+        // Only proceed if not in an input field
+        if (!isInputField) {
+          // Handle delete in main mode (for quizzes/decks)
+          if (!mode && selectedItems.size > 0) {
+            handleRemoveItems();
+          }
+          // Handle delete in create/edit mode (for questions/cards)
+          else if (mode === 'create' && selectedQuestionIndices.size > 0) {
+            handleRemoveQuestion();
+          }
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [mode, selectedItems, selectedQuestionIndices, handleRemoveItems]);
 
   // Update the ImageThumbnail component
   const ImageThumbnail = ({ imageSrc, onRemove, field, index }) => {
@@ -1391,7 +1669,8 @@ function App() {
       // Set up the flashcard runner
       setCurrentFlashcardDeck({
         name: getBaseName(deck.name),
-        cards: cards
+        cards: cards,
+        startSide: flashcardStartSide // Pass the selected start side
       })
       setIsFlashcardRunnerActive(true)
     } catch (error) {
@@ -1406,6 +1685,20 @@ function App() {
     setIsFlashcardRunnerActive(false)
     setCurrentFlashcardDeck(null)
   }
+
+  // Add a handler for arcade button click
+  const handleArcadeClick = () => {
+    if (completionCount >= 100) {
+      // Show the arcade screen directly without celebration animation
+      setShowArcade(true);
+    } else {
+      // Show the message for 3 seconds
+      setShowArcadeMessage(true);
+      setTimeout(() => {
+        setShowArcadeMessage(false);
+      }, 3000);
+    }
+  };
 
   // Let's update the handleRunQuiz function to fix the blank screen issue
   const handleRunQuiz = (quizBank) => {
@@ -1561,6 +1854,144 @@ function App() {
   const togglePracticeMode = () => {
     setIsPracticeModeEnabled(!isPracticeModeEnabled);
   }
+
+  const handleImportQuestions = async (event) => {
+    const files = event.target.files
+    if (!files || files.length === 0) return
+    
+    const file = files[0]
+    const content = await file.text()
+    
+    try {
+      let importedItems = []
+      
+      // Parse based on file type
+      if (file.name.endsWith('.jqz')) {
+        const parsed = JSON.parse(content)
+        
+        // Check if file type matches current create type
+        const fileType = parsed.type === 'quiz' ? 'Quiz' : 'Deck'
+        if (fileType !== createType) {
+          showWarning(`This is a ${fileType.toLowerCase()}, but you are creating a ${createType.toLowerCase()}. Import canceled.`, null, false, 'OK')
+          if (importQuestionsRef.current) {
+            importQuestionsRef.current.value = ''
+          }
+          return
+        }
+        
+        importedItems = parsed.items
+      } else {
+        // Handle txt and csv files
+        // Determine type by content structure, not filename
+        const contentType = determineContentType(content)
+        const isQuiz = contentType === 'quiz'
+        const isFlash = !isQuiz
+        
+        // Check if file type matches current create type
+        if ((isQuiz && createType !== 'Quiz') || (isFlash && createType !== 'Deck')) {
+          showWarning(`File appears to be a ${isQuiz ? 'quiz' : 'flashcard deck'}, but you are creating a ${createType.toLowerCase()}. Import canceled.`, null, false, 'OK')
+          if (importQuestionsRef.current) {
+            importQuestionsRef.current.value = ''
+          }
+          return
+        }
+        
+        importedItems = isQuiz ? parseQuizContent(content) : parseFlashContent(content)
+      }
+      
+      if (importedItems.length === 0) {
+        throw new Error('No valid items found in file')
+      }
+      
+      // Add imported items to current questions
+      setCurrentQuestions(prev => {
+        const newQuestions = [...prev, ...importedItems]
+        setHasChanges(true)
+        setIsQuizSaved(false)
+        
+        // Select the first newly added question
+        const newIndex = prev.length
+        setSelectedQuestionIndices(new Set([newIndex]))
+        
+        // Scroll to the first imported question after a short delay
+        setTimeout(() => {
+          const questionsList = document.querySelector('.questions-list')
+          const newQuestion = questionsList.children[newIndex]
+          if (newQuestion) {
+            newQuestion.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          }
+        }, 50)
+        
+        return newQuestions
+      })
+      
+      // Show success message
+      showWarning(`Successfully imported ${importedItems.length} ${createType === 'Quiz' ? 'questions' : 'cards'}.`)
+    } catch (e) {
+      console.error(`Error importing from file ${file.name}:`, e)
+      showWarning(`Error importing from file ${file.name}. Please check the file format.`)
+    }
+    
+    // Reset the file input
+    if (importQuestionsRef.current) {
+      importQuestionsRef.current.value = ''
+    }
+  }
+
+  // Add new function to handle marking the current line as a correct answer
+  const handleMarkCorrectAnswer = () => {
+    const textarea = side2Ref.current;
+    if (!textarea) {
+      console.error('Textarea reference is null');
+      return;
+    }
+
+    const cursorPos = textarea.selectionStart;
+    const text = textarea.value;
+    
+    // Find the start of the current line
+    let lineStart = cursorPos;
+    while (lineStart > 0 && text[lineStart - 1] !== '\n') {
+      lineStart--;
+    }
+    
+    // Check if the line already starts with an asterisk
+    const currentLine = text.substring(lineStart);
+    const trimmedLine = currentLine.trimStart();
+    if (trimmedLine.startsWith('*')) {
+      return; // Line already marked as correct
+    }
+    
+    // Calculate leading spaces
+    const leadingSpaces = currentLine.length - trimmedLine.length;
+    
+    // Insert asterisk after leading spaces
+    const beforeLine = text.substring(0, lineStart + leadingSpaces);
+    const afterSpaces = text.substring(lineStart + leadingSpaces);
+    const updatedText = beforeLine + '*' + afterSpaces;
+    
+    // Update textarea value
+    textarea.value = updatedText;
+    
+    // Update React state
+    checkContentChanges(updatedText, 'side2');
+    
+    // Position cursor after the asterisk
+    const newCursorPos = lineStart + leadingSpaces + 1;
+    textarea.setSelectionRange(newCursorPos, newCursorPos);
+    textarea.focus();
+    
+    // Mark question as modified
+    if (selectedQuestionIndices.size > 0) {
+      const currentIndex = Math.max(...Array.from(selectedQuestionIndices));
+      setModifiedQuestions(prev => new Set([...prev, currentIndex]));
+      setHasChanges(true);
+      setIsQuizSaved(false);
+    }
+  }
+
+  // Make checkContentChanges available globally
+  window.checkContentChanges = checkContentChanges;
 
   return (
     <div className={`container ${isDarkMode ? 'dark' : 'light'}`} data-mode={mode}>
@@ -1744,7 +2175,19 @@ function App() {
                       <>
                         Answer Choices:
                         <span className="correct-answer-hint">
-                          Mark correct answer(s) with a ( * ) in front
+                          Mark correct answer(s) with a 
+                          <button 
+                            className="mark-correct-button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleMarkCorrectAnswer();
+                            }}
+                            title="Mark current line as correct answer"
+                            disabled={!isAnswerOptionsFocused}
+                          >
+                            *
+                          </button>
+                          in front
                         </span>
                       </>
                     ) : 'Side 2:'}
@@ -1766,6 +2209,8 @@ function App() {
                     rows="6"
                     disabled={!isNameConfirmed || (isEditMode && selectedQuestionIndices.size === 0)}
                     onChange={(e) => checkContentChanges(e.target.value, 'side2')}
+                    onFocus={() => setIsAnswerOptionsFocused(true)}
+                    onBlur={() => setIsAnswerOptionsFocused(false)}
                   />
                 </div>
 
@@ -1884,7 +2329,14 @@ function App() {
                 {message}
               </div>
               <h1>jQuizzle-T2</h1>
-              <div className="version-number">v2.6</div>
+              <a 
+                href="https://github.com/jHoon7/jQuizzle-T2" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="version-number"
+              >
+                v2.7
+              </a>
             </>
           )}
           
@@ -1982,6 +2434,20 @@ function App() {
                         Remove {selectedQuestionIndices.size} {createType === 'Quiz' ? 'Question' : 'Card'}
                         {selectedQuestionIndices.size > 1 ? 's' : ''}
                       </button>
+                      <button
+                        className="import-questions-button"
+                        onClick={() => importQuestionsRef.current.click()}
+                      >
+                        <span>📁</span>
+                        Add from File
+                      </button>
+                      <input
+                        type="file"
+                        ref={importQuestionsRef}
+                        onChange={handleImportQuestions}
+                        style={{ display: 'none' }}
+                        accept=".jqz,.txt,.csv"
+                      />
                     </div>
                   </>
                 )}
@@ -2131,12 +2597,25 @@ function App() {
                           >
                             Remove
                           </button>
+                          <button 
+                            className="import-button"
+                            onClick={() => importItemsRef.current.click()}
+                          >
+                            Add from File
+                          </button>
+                          <input
+                            type="file"
+                            ref={importItemsRef}
+                            onChange={handleImportQuestions}
+                            style={{ display: 'none' }}
+                            accept=".jqz,.txt,.csv"
+                          />
                         </div>
                       )}
                     </div>
                   </>
                 ) : (
-                  <div className={`bank-container ${isDraggingOver ? 'dragging-over' : ''}`}>
+                  <>
                     <div className="bank-header">
                       <button 
                         className={`sort-button ${sortField === 'name' ? 'active' : ''}`}
@@ -2161,45 +2640,139 @@ function App() {
                         )}
                       </button>
                     </div>
-                    {[...flashcardDecks]
-                      .sort((a, b) => {
-                        if (sortField === 'name') {
-                          const nameA = getBaseName(a.name).toLowerCase()
-                          const nameB = getBaseName(b.name).toLowerCase()
-                          return sortDirection === 'asc'
-                            ? nameA.localeCompare(nameB)
-                            : nameB.localeCompare(nameA)
-                        } else {
-                          return sortDirection === 'asc'
-                            ? a.cardCount - b.cardCount
-                            : b.cardCount - a.cardCount
-                        }
-                      })
-                      .map((deck, index) => (
-                        <div 
-                          key={deck.name} 
-                          className={`bank-item ${selectedItems.has(deck.name) ? 'selected' : ''}`}
-                          onClick={(e) => handleItemSelection(deck, e)}
-                          onDoubleClick={() => handleItemDoubleClick(deck, 'flashcard')}
-                        >
-                          <div className="bank-item-left">
-                            <span className="bank-item-number">{index + 1}.</span>
-                            <span>{getBaseName(deck.name)}</span>
+                    <div className={`bank-container ${isDraggingOver ? 'dragging-over' : ''}`}>
+                      {[...flashcardDecks]
+                        .sort((a, b) => {
+                          if (sortField === 'name') {
+                            const nameA = getBaseName(a.name).toLowerCase()
+                            const nameB = getBaseName(b.name).toLowerCase()
+                            return sortDirection === 'asc'
+                              ? nameA.localeCompare(nameB)
+                              : nameB.localeCompare(nameA)
+                          } else {
+                            return sortDirection === 'asc'
+                              ? a.cardCount - b.cardCount
+                              : b.cardCount - a.cardCount
+                          }
+                        })
+                        .map((deck, index) => (
+                          <div 
+                            key={deck.name} 
+                            className={`bank-item ${selectedItems.has(deck.name) ? 'selected' : ''}`}
+                            onClick={(e) => handleItemSelection(deck, e)}
+                            onDoubleClick={() => handleItemDoubleClick(deck, 'flashcard')}
+                          >
+                            <div className="bank-item-left">
+                              <span className="bank-item-number">{index + 1}.</span>
+                              <span>{getBaseName(deck.name)}</span>
+                            </div>
+                            <span>{deck.cardCount} cards</span>
                           </div>
-                          <span>{deck.cardCount} cards</span>
+                        ))}
+                      {flashcardDecks.length === 0 && (
+                        <div className="empty-state">
                         </div>
-                      ))}
-                    {flashcardDecks.length === 0 && (
-                      <div className="empty-state">
+                      )}
+                    </div>
+                    
+                    {/* Add action buttons for flashcard decks */}
+                    <div className="bottom-controls-container">
+                      <div className="start-side-slider-container">
+                        <div className="start-side-slider">
+                          <span className="start-side-label">Start Side:</span>
+                          <div className="side-options">
+                            <button 
+                              className={`side-option ${flashcardStartSide === 'A' ? 'active' : ''}`}
+                              onClick={() => setFlashcardStartSide('A')}
+                            >
+                              A
+                            </button>
+                            <button 
+                              className={`side-option ${flashcardStartSide === 'B' ? 'active' : ''}`}
+                              onClick={() => setFlashcardStartSide('B')}
+                            >
+                              B
+                            </button>
+                            <button 
+                              className={`side-option ${flashcardStartSide === 'Random' ? 'active' : ''}`}
+                              onClick={() => setFlashcardStartSide('Random')}
+                            >
+                              Random
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                    )}
-                  </div>
+                      
+                      {selectedItems.size > 0 && !mode && (
+                        <div className="action-buttons">
+                          {selectedItems.size === 1 && (
+                            <button 
+                              className="edit-button"
+                              onClick={() => {
+                                const item = flashcardDecks.find(d => d.name === Array.from(selectedItems)[0])
+                                if (item) {
+                                  handleItemDoubleClick(item, 'flashcard')
+                                }
+                              }}
+                            >
+                              Edit
+                            </button>
+                          )}
+                          <button 
+                            className="remove-button"
+                            onClick={handleRemoveItems}
+                          >
+                            Remove
+                          </button>
+                          <button 
+                            className="import-button"
+                            onClick={() => importItemsRef.current.click()}
+                          >
+                            Add from File
+                          </button>
+                          <input
+                            type="file"
+                            ref={importItemsRef}
+                            onChange={handleImportQuestions}
+                            style={{ display: 'none' }}
+                            accept=".jqz,.txt,.csv"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </>
                 )}
               </div>
             </>
           )}
         </div>
       </div>
+
+      {/* Add arcade container above top-gum-container */}
+      {/* 
+      ==========================================
+      FEATURE_DISABLED: ARCADE_BUTTON
+      Temporarily commenting out arcade button UI while other features are being updated.
+      TODO: Re-enable this feature once arcade functionality is stabilized.
+      This block contains the arcade button, counter, and message bubble.
+      ==========================================
+      <div className="arcade-container">
+        <img 
+          src={arcadeLogo} 
+          className={`arcade-logo ${completionCount >= 100 ? '' : 'disabled'}`}
+          alt="Arcade"
+          onClick={handleArcadeClick}
+        />
+        {completionCount >= 100 ? (
+          <span className="arcade-counter study-break">Study Break!</span>
+        ) : (
+          <span className="arcade-counter">{completionCount}/100</span>
+        )}
+        <div className={`arcade-message-bubble ${showArcadeMessage ? 'show' : ''}`}>
+          Complete 100 Questions or Flashcards to earn a study break!
+        </div>
+      </div>
+      */}
 
       <div className="top-gum-container">
         <img src={topGumLogo} className="top-gum-logo" alt="Top Gum Logo" />
@@ -2234,6 +2807,7 @@ function App() {
               onClose={() => setShowQuizRunner(false)}
               isDarkMode={isDarkMode}
               onThemeToggle={toggleTheme}
+              onItemComplete={() => setCompletionCount(prev => prev + 1)}
             />
           </ErrorBoundary>
         </div>
@@ -2242,7 +2816,7 @@ function App() {
       {showWarningModal && (
         <WarningModal
           message={warningMessage}
-          onConfirm={warningCallback}
+          onConfirm={warningCallback || (() => setShowWarningModal(false))}
           onCancel={() => {
             if (warningCancelCallback) warningCancelCallback()
             else setShowWarningModal(false)
@@ -2257,9 +2831,11 @@ function App() {
           <FlashcardRunner 
             cards={currentFlashcardDeck.cards}
             deckName={currentFlashcardDeck.name}
+            startSide={currentFlashcardDeck.startSide}
             onClose={handleCloseFlashcardRunner}
             isDarkMode={isDarkMode}
             onThemeToggle={toggleTheme}
+            onItemComplete={() => setCompletionCount(prev => prev + 1)}
           />
         </div>
       )}
@@ -2273,9 +2849,24 @@ function App() {
             onClose={handleClosePracticeModeRunner}
             isDarkMode={isDarkMode}
             onThemeToggle={toggleTheme}
+            onItemComplete={() => setCompletionCount(prev => prev + 1)}
           />
         </div>
       )}
+
+      {/* Add Arcade Screen */}
+      {/* ==========================================
+      FEATURE_DISABLED: ARCADE_SCREEN
+      Temporarily hiding arcade screen while other features are being updated.
+      This matches the ARCADE_BUTTON feature that has been disabled above.
+      TODO: Re-enable once arcade functionality is stabilized.
+      ========================================== */}
+      {/* {showArcade && (
+        <div className="arcade-overlay">
+          <ArcadeScreen onClose={() => setShowArcade(false)} />
+        </div>
+      )} */}
+
     </div>
   )
 }

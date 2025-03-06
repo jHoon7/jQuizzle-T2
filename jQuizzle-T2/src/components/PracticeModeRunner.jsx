@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import '../styles/PracticeModeRunner.css'
 
-const PracticeModeRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle }) => {
+const PracticeModeRunner = ({ questions, quizName, onClose, isDarkMode, onThemeToggle, onItemComplete }) => {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [selectedAnswers, setSelectedAnswers] = useState(Array(questions.length).fill([]))
   const [isSubmitted, setIsSubmitted] = useState(Array(questions.length).fill(false))
@@ -47,24 +47,37 @@ const PracticeModeRunner = ({ questions, quizName, onClose, isDarkMode, onThemeT
 
   // Handle submitting the answer
   const handleSubmit = () => {
-    const newIsSubmitted = [...isSubmitted]
-    newIsSubmitted[currentIndex] = true
-    setIsSubmitted(newIsSubmitted)
+    if (isSubmitted[currentIndex]) return
     
-    // Check if answer is correct
-    const isCorrect = checkAnswer(currentIndex)
+    // Check if the answer is correct
+    const isCorrect = checkAnswer()
     
-    // Update results array
-    const newResults = [...results]
-    newResults[currentIndex] = isCorrect
-    setResults(newResults)
+    // Update results
+    setResults(prev => {
+      const newResults = [...prev]
+      newResults[currentIndex] = isCorrect
+      return newResults
+    })
     
-    // Update score only if this is the first time answering this question
-    if (results[currentIndex] === null) {
-      if (isCorrect) {
-        setScore(prev => prev + 1)
-      }
+    // Mark this question as submitted
+    setIsSubmitted(prev => {
+      const newSubmitted = [...prev]
+      newSubmitted[currentIndex] = true
+      return newSubmitted
+    })
+    
+    // Update score and questions answered
+    if (isCorrect) {
+      setScore(prev => prev + 1)
+    }
+    
+    if (!isSubmitted[currentIndex]) {
       setQuestionsAnswered(prev => prev + 1)
+      
+      // Call onItemComplete when a question is answered for the first time
+      if (onItemComplete) {
+        onItemComplete()
+      }
     }
   }
 

@@ -1,0 +1,211 @@
+.s-mutans-game {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100vh;
+  background-color: #121212;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.game-layout {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  max-width: 900px;
+  margin: 0 auto;
+  height: auto;
+}
+
+.controls-panel {
+  width: 200px;
+  padding: 20px;
+  background-color: #1a1a1a;
+  border-radius: 10px 0 0 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 600px;
+  justify-content: flex-start;
+}
+
+.controls-legend {
+  margin-top: 30px;
+  text-align: center;
+  color: #fff;
+}
+
+.controls-legend h3 {
+  margin-bottom: 15px;
+  color: #4ECDC4;
+}
+
+.controls-legend p {
+  margin: 8px 0;
+}
+
+.control-toggle {
+  margin-top: 15px;
+  margin-bottom: 15px;
+}
+
+.toggle-label {
+  color: #fff;
+  font-size: 14px;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.toggle-switch-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 5px;
+}
+
+.toggle-option {
+  font-size: 12px;
+  color: #aaa;
+  padding: 0 5px;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 18px;
+  margin: 0 4px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #666;
+  transition: .2s;
+  border-radius: 18px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: .2s;
+  border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+  background-color: #4ECDC4;
+}
+
+input:checked + .toggle-slider:before {
+  transform: translateX(18px);
+}
+
+.active-option {
+  color: #4ECDC4;
+  font-weight: bold;
+}
+
+.inactive-option {
+  color: #aaa;
+}
+
+.exit-button {
+  width: 100px;
+  height: 40px;
+  background-color: #FF6B6B;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  margin-bottom: 20px;
+}
+
+.exit-button:hover {
+  background-color: #e74c3c;
+}
+
+.game-container {
+  width: 600px;
+  height: 600px;
+  border: 5px solid #333;
+  border-radius: 0 10px 10px 0;
+  overflow: hidden;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  background-color: #121212;
+  position: relative;
+}
+
+.game-canvas {
+  display: block;
+  width: 600px;
+  height: 600px;
+}
+
+/* Petri dish border effect - make it more visible */
+.game-container::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  right: -5px;
+  bottom: -5px;
+  border-radius: 15px;
+  background: linear-gradient(45deg, #5D8AA8, #87CEEB);
+  z-index: -1;
+  opacity: 0.8;
+}
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+  .game-layout {
+    flex-direction: column;
+  }
+  
+  .controls-panel {
+    width: 600px;
+    height: auto;
+    border-radius: 10px 10px 0 0;
+    padding: 15px;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+  
+  .controls-legend {
+    margin-top: 0;
+    text-align: left;
+  }
+  
+  .game-container {
+    border-radius: 0 0 10px 10px;
+  }
+}
+
+/* Animation for boost effect */
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 0.7; }
+  50% { transform: scale(1.1); opacity: 0.9; }
+  100% { transform: scale(1); opacity: 0.7; }
+}
+
+.boost-glow {
+  animation: pulse 0.5s infinite;
+} 
