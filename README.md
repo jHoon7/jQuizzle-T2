@@ -2,7 +2,7 @@
 Major facelift from the previous quiz app with all the same functionality and more! 
 
 
-Web host: https://j-quizzle-t2.vercel.app/
+Web hosting: https://j-quizzle-t2.vercel.app/
 
 Report bugs or provide suggestions to OriOriGo@duck.com
 
