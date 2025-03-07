@@ -855,7 +855,12 @@ function App() {
     }).filter(Boolean)
   }
 
-  const handleItemDoubleClick = (item, type) => {
+  const handleItemDoubleClick = (item, type, event) => {
+    // If event is provided, stop propagation
+    if (event) {
+      event.stopPropagation()
+    }
+    
     console.log(`Double-clicked ${type} item:`, item)
     
     try {
@@ -942,6 +947,9 @@ function App() {
   }
 
   const handleItemSelection = (item, event) => {
+    // Stop event propagation to prevent handleGlobalClick from clearing the selection
+    event.stopPropagation()
+    
     console.log('Handling item selection:', item)
     const newSelected = new Set(selectedItems)
     
@@ -1467,7 +1475,7 @@ function App() {
         // Only proceed if not in an input field
         if (!isInputField) {
           // Handle delete in main mode (for quizzes/decks)
-          if (!mode && selectedItems.size > 0) {
+          if (mode !== 'create' && selectedItems.size > 0) {
             handleRemoveItems();
           }
           // Handle delete in create/edit mode (for questions/cards)
@@ -2335,7 +2343,7 @@ function App() {
                 rel="noopener noreferrer" 
                 className="version-number"
               >
-                v2.7
+                v2.8
               </a>
             </>
           )}
@@ -2542,7 +2550,7 @@ function App() {
                             key={bank.name} 
                             className={`bank-item ${selectedItems.has(bank.name) ? 'selected' : ''}`}
                             onClick={(e) => handleItemSelection(bank, e)}
-                            onDoubleClick={() => handleItemDoubleClick(bank, 'quiz')}
+                            onDoubleClick={(e) => handleItemDoubleClick(bank, 'quiz', e)}
                           >
                             <div className="bank-item-left">
                               <span className="bank-item-number">{index + 1}.</span>
@@ -2573,7 +2581,7 @@ function App() {
                         </button>
                       </div>
                       
-                      {selectedItems.size > 0 && !mode && (
+                      {selectedItems.size > 0 && mode !== 'create' && (
                         <div className="action-buttons">
                           {selectedItems.size === 1 && (
                             <button 
@@ -2660,7 +2668,7 @@ function App() {
                             key={deck.name} 
                             className={`bank-item ${selectedItems.has(deck.name) ? 'selected' : ''}`}
                             onClick={(e) => handleItemSelection(deck, e)}
-                            onDoubleClick={() => handleItemDoubleClick(deck, 'flashcard')}
+                            onDoubleClick={(e) => handleItemDoubleClick(deck, 'flashcard', e)}
                           >
                             <div className="bank-item-left">
                               <span className="bank-item-number">{index + 1}.</span>
@@ -2703,7 +2711,7 @@ function App() {
                         </div>
                       </div>
                       
-                      {selectedItems.size > 0 && !mode && (
+                      {selectedItems.size > 0 && mode !== 'create' && (
                         <div className="action-buttons">
                           {selectedItems.size === 1 && (
                             <button 

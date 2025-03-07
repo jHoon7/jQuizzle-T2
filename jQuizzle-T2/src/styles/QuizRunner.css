@@ -185,7 +185,7 @@
   overflow-y: auto;
   position: relative;
   min-height: 0;
-  padding-bottom: 120px; /* Increased bottom padding to make room for navigation */
+  padding-bottom: 40px;
 }
 
 .top-controls {
@@ -196,8 +196,8 @@
   flex-direction: column;
   gap: 10px;
   align-items: flex-end;
-  z-index: 100; /* Increased z-index to ensure visibility */
-  background: transparent; /* Make background transparent */
+  z-index: 100;
+  background: transparent;
   padding: 10px;
   border-radius: 10px;
 }
@@ -211,7 +211,7 @@
   padding: 8px 16px;
   border-radius: 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  z-index: 101; /* Ensure timer is above other elements */
+  z-index: 101;
 }
 
 .question-container {
@@ -220,12 +220,11 @@
   width: 100%;
   background: var(--background-dark);
   padding: 30px;
-  padding-bottom: 100px; /* Increase bottom padding to make room for fixed nav buttons */
+  padding-bottom: 60px;
   border-radius: 12px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-  margin-bottom: auto; /* Push content up */
   position: relative;
-  z-index: 20; /* Make sure content is above the navigation */
+  z-index: 20;
 }
 
 .question-container h2 {
@@ -293,21 +292,22 @@
 }
 
 .navigation {
-  position: fixed;
-  bottom: 20px;
-  left: calc(50% + 150px); /* Offset by half the nav panel width to center in content area */
-  transform: translateX(-50%);
+  position: relative;
+  bottom: auto;
+  left: auto;
+  transform: none;
   display: flex;
   justify-content: space-between;
   padding: 15px 20px;
-  margin-top: auto;
-  background: transparent; /* Make background transparent */
+  margin-top: 20px;
+  background: transparent;
   border-radius: 12px;
-  z-index: 200; /* Even higher z-index than the top controls */
-  width: auto;
-  min-width: 400px; /* Increase minimum width to space out buttons more */
-  gap: 300px; /* Increased from 100px to 150px for more space between buttons */
-  box-shadow: none; /* Remove box shadow */
+  z-index: 50;
+  width: 100%;
+  max-width: 1000px;
+  margin: 20px auto 0;
+  gap: 20px;
+  box-shadow: none;
 }
 
 .navigation button {
@@ -414,7 +414,7 @@
     padding: 8px;
     gap: 8px;
     max-width: calc(100% - 20px);
-    z-index: 1050; /* Even higher z-index for mobile */
+    z-index: 1050;
     margin-bottom: 0;
     background: transparent;
   }
@@ -461,13 +461,16 @@
   }
    
   .navigation {
-    bottom: 10px;
-    left: 50%; /* Reset to center on mobile since nav panel is at top */
-    width: 90%;
+    position: relative;
+    bottom: auto;
+    left: auto;
+    width: 100%;
     padding: 10px;
     min-width: unset;
-    gap: 30px; /* Smaller gap for mobile but still spaced out */
+    gap: 10px;
     background: transparent;
+    margin-top: 20px;
+    transform: none;
   }
    
   .navigation button {
@@ -832,8 +835,10 @@
   }
   
   .navigation {
-    bottom: 10px;
-    width: 90%;
+    position: relative;
+    bottom: auto;
+    left: auto;
+    width: 100%;
     padding: 10px;
     min-width: unset;
   }
@@ -877,14 +882,6 @@
 .export-button:hover {
   background: var(--primary-hover);
   transform: translateY(-1px);
-}
-
-/* Update top controls layout */
-.top-controls {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  margin-bottom: 30px;
 }
 
 /* Add styles for correct answer highlighting */

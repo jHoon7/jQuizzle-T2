@@ -183,9 +183,13 @@
 
 .top-controls {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   margin-bottom: 30px;
+  position: fixed;
+  top: 20px;
+  right: 30px;
+  z-index: 100;
 }
 
 .timer {
@@ -196,16 +200,25 @@
   padding: 8px 16px;
   border-radius: 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  z-index: 101;
 }
 
 .deck-info {
-  text-align: center;
+  position: fixed;          /* Anchors the container to the viewport */
+  top: 30px;               /* Distance from the top */
+  right: 50px;             /* Distance from the right */
+  max-width: 300px;        /* Limits the container's width */
+  display: flex;           /* Enables flexbox for layout control */
+  flex-direction: column;  /* Stacks children vertically */
+  align-items: flex-end;   /* Aligns children to the right */
+  text-align: right;       /* Ensures text is right-aligned */
 }
 
 .deck-name {
   margin: 0;
   font-size: 1.5em;
   color: var(--text-primary);
+  text-align: right;       /* Ensures text is right-aligned */
 }
 
 .card-count {
@@ -214,7 +227,9 @@
   margin-top: 5px;
   display: flex;
   align-items: center;
+  justify-content: flex-end; /* Aligns content to the right */
   gap: 10px;
+  text-align: right;       /* Ensures text is right-aligned */
 }
 
 .side-indicator {
@@ -628,6 +643,20 @@
   .warning-buttons button {
     width: 100%;
   }
+
+  .deck-info {
+    top: 5px;
+    right: 5px;
+    max-width: 200px; /* Smaller max-width on mobile */
+  }
+  
+  .deck-name {
+    font-size: 1.2em; /* Smaller font size on mobile */
+  }
+  
+  .card-count {
+    font-size: 12px; /* Smaller font size on mobile */
+  }
 }
 
 /* Category counters styling */
@@ -688,9 +717,9 @@
 /* Jettison button styling */
 .jettison-button {
   position: absolute;
-  top: -60px;
+  top: -100px;
   left: 0;
-  margin-top: 40px;
+  margin-top: 20px;
   padding: 8px 15px;
   border-radius: 6px;
   background-color: #6c757d;
