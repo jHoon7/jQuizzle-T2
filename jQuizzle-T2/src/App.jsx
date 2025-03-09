@@ -7,6 +7,7 @@ import QuizRunner from './components/QuizRunner'
 import FlashcardRunner from './components/FlashcardRunner'
 import PracticeModeRunner from './components/PracticeModeRunner'
 import ArcadeScreen from './components/ArcadeScreen'
+import { Analytics } from "@vercel/analytics/react"
 
 // Move ConfirmationModal outside of App component
 const ConfirmationModal = ({ onConfirm, onCancel, onDiscard }) => {
@@ -2874,7 +2875,8 @@ function App() {
           <ArcadeScreen onClose={() => setShowArcade(false)} />
         </div>
       )} */}
-
+	  
+		<Analytics />
     </div>
   )
 }
