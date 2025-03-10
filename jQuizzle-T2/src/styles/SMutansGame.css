@@ -84,11 +84,11 @@
   margin-bottom: 15px;
 }
 
-.button-container {
+.game-button-container {
   display: flex;
   justify-content: flex-start;
   align-items: center;
-  margin: 300px 0 0 -40px;
+  margin: 20px 0;
   width: 100%;
   gap: 20px;
   flex-direction: row;

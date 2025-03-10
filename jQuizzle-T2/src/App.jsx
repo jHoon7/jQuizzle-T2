@@ -2398,7 +2398,7 @@ function App() {
                 rel="noopener noreferrer" 
                 className="version-number"
               >
-                v3.0
+                v3.1
               </a>
             </>
           )}

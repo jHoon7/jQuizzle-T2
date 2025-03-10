@@ -806,7 +806,7 @@ p {
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
-  padding: 1rem 1rem 1rem max(4vw, 6rem);
+  padding: 1rem 1rem 1rem max(2vw, 3rem);
   margin: 1rem max(2vw, 3rem) 0;
   position: relative;
   overflow-y: auto;
@@ -895,42 +895,15 @@ p {
 }
 
 /* Update button container spacing */
-.button-container {
-  position: absolute;
-  top: 1rem;
-  left: 5rem;
-  gap: 1.5rem;
+.container .button-container {
+  position: fixed;
+  top: 2rem;
+  left: 3rem;
+  gap: 1rem;
   z-index: 100;
   display: flex;
   flex-direction: column;
 }
-
-/* Update add question button sizing */
-/* .add-question-button {
-  position: fixed;
-  left: 5rem;
-  top: 55%;
-  transform: translateY(-50%);
-  width: clamp(40px, 5vw, 60px);
-  height: clamp(40px, 5vw, 60px);
-  ... other old styles ...
-} */
-
-/* Remove any hover/focus styles that might add borders */
-/* .add-question-button:hover,
-.add-question-button:focus,
-.add-question-button:active {
-  outline: none;
-  border: none;
-  background-color: #45a049;
-  transform: translateY(-50%) scale(1.1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-} */
-
-/* Remove the filter style completely */
-/* .light .plus-icon {
-  filter: none;
-} */
 
 /* Add specific styling for create mode */
 .bank-items {
@@ -992,8 +965,11 @@ p {
     padding-top: 1rem;
   }
 
-  .button-container {
+  .container .button-container {
     gap: 1.5rem;
+    left: 2.5rem;
+    flex-direction: column;
+    top: 1.75rem;
   }
   
   .back-button, .save-button {
@@ -1018,9 +994,10 @@ p {
     width: 100%;
   }
 
-  .button-container {
-    flex-direction: row;
+  .container .button-container {
+    flex-direction: column;
     gap: 1.5rem;
+    left: 1.8rem;
   }
 }
 
@@ -1325,6 +1302,12 @@ p {
   border: none;
 }
 
+/* Make sure buttons are properly positioned in create mode */
+.container[data-mode="create"] .button-container {
+  left: 3rem;
+  flex-direction: column;
+}
+
 /* Update main content in create mode */
 .container[data-mode="create"] .main-content {
   height: 100vh;
@@ -1349,7 +1332,7 @@ p {
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
-  padding: 1rem 1rem 1rem max(4vw, 6rem);
+  padding: 1rem 1rem 1rem max(2vw, 3rem);
   margin: 1rem max(2vw, 3rem) 0;
   position: relative;
   overflow-y: auto;
@@ -1372,8 +1355,8 @@ p {
 
 /* Update right section width in create mode */
 .container[data-mode="create"] .right-section {
-  width: min(40vw, 600px);  /* Increased from 30vw to 40vw */
-  min-width: 400px;  /* Increased from 300px to 400px */
+  width: min(35vw, 550px);  /* Reduced from 40vw to 35vw and 600px to 550px */
+  min-width: 380px;  /* Reduced from 400px to 380px */
   margin-right: max(2vw, 2rem);
   margin-top: 6rem;
   padding-top: 0;

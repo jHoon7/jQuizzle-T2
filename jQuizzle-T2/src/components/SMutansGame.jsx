@@ -1291,7 +1291,7 @@ const SMutansGame = ({ onClose, tokenCount, onTokenUse }) => {
               <h2>Out of Lives</h2>
               <p>Would you like to use a token for 3 more lives?</p>
               <p className="tokens-remaining">Tokens Remaining: {tokenCount}</p>
-              <div className="button-container">
+              <div className="game-button-container">
                 <button 
                   className="use-token" 
                   onClick={useToken} 
