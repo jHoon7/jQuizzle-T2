@@ -2020,42 +2020,34 @@ body:has(.practice-mode-overlay) {
   text-decoration: underline;
 }
 
-/* Arcade feature styles */
+/* Arcade container styles */
 .arcade-container {
   position: fixed;
-  top: 50%;
-  left: 20px;
-  transform: translateY(-50%);
+  bottom: 50%;
+  left: 30px;
+  transform: translateY(50%);
+  z-index: 10;
   display: flex;
   flex-direction: column;
   align-items: center;
-  z-index: 10;
-  gap: 0.5rem;
-  width: 100px;
+  gap: 5px;
 }
 
 .arcade-counter {
+  display: inline-block;
+  background: var(--background-darker);
   color: var(--text-primary);
-  font-size: 1rem;
-  font-weight: bold;
-  margin-top: 0.25rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  margin-top: 5px;
 }
 
 .arcade-counter.study-break {
-  color: var(--primary-color);
-  font-size: 1.2rem;
-  text-shadow: 0 0 5px rgba(var(--primary-rgb), 0.5);
-  animation: pulse 1.5s infinite alternate;
-  margin-top: 0.25rem;
-}
-
-@keyframes pulse {
-  0% {
-    transform: scale(1);
-  }
-  100% {
-    transform: scale(1.1);
-  }
+  background: var(--primary-color);
+  color: white;
+  font-weight: bold;
+  animation: pulse 2s infinite;
 }
 
 .arcade-logo {
@@ -2108,15 +2100,19 @@ body:has(.practice-mode-overlay) {
 }
 
 .arcade-close-button {
-  margin-top: 1rem;
+  margin: 1rem auto;
   padding: 0.5rem 1rem;
   background-color: var(--primary-color);
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 1.2rem;
+  font-weight: bold;
   transition: background-color 0.3s ease;
+  height: 45px;
+  width: 260px;
+  display: block;
 }
 
 .arcade-close-button:hover {
@@ -2207,11 +2203,18 @@ body:has(.practice-mode-overlay) {
   margin-top: 30px;
 }
 
-.arcade-game-coming-soon p {
+.arcade-game-coming-soon p,
+.arcade-game p {
   margin: 0;
   font-size: 0.9rem;
-  color: var(--text-secondary);
+  color: var(--text-primary); /* Use primary text color for better visibility */
   animation: fadeIn 0.3s ease;
+}
+
+/* Light mode specific styling for game card descriptions */
+.light .arcade-game-coming-soon p,
+.light .arcade-game p {
+  color: var(--text-primary); /* Ensure text is visible in light mode */
 }
 
 @keyframes fadeIn {
@@ -2478,8 +2481,62 @@ body:has(.practice-mode-overlay) {
   border-radius: 20px;
   font-weight: bold;
   font-size: 1.2rem;
-  color: var(--text-primary);
+  color: white !important; /* Use white for dark mode with !important to override */
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Add styles for disabled token counter */
+.token-counter.disabled {
+  opacity: 0.5;
+  filter: grayscale(1);
+}
+
+/* Add token counter message styles */
+.token-counter-message {
+  position: absolute;
+  top: 50px;
+  right: 10px;
+  padding: 0.7rem 1rem;
+  background-color: #555555;
+  border-radius: 18px;
+  font-size: 0.8rem;
+  max-width: 180px;
+  text-align: center;
+  margin-top: 10px;
+  color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+  transition: transform 0.3s ease-in-out;
+}
+
+/* Add message bubble arrow */
+.token-counter-message:after {
+  content: '';
+  position: absolute;
+  top: -8px;
+  right: 15px;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 8px solid #555555;
+}
+
+/* Add pulsate animation for the token message */
+.pulsate {
+  animation: messagePulsate 2s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@keyframes messagePulsate {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+/* Add light mode specific styling for token counter */
+.light .token-counter {
+  color: black !important; /* Use black for light mode with !important to override */
 }
 
 .token-counter-icon {
@@ -2586,6 +2643,13 @@ body:has(.practice-mode-overlay) {
 .arcade-game-coming-soon h3 {
   position: relative;
   display: inline-block;
+  color: var(--text-primary); /* Ensure title is visible in both modes */
+}
+
+/* Light mode specific styling for game card titles */
+.light .arcade-game h3,
+.light .arcade-game-coming-soon h3 {
+  color: var(--text-primary); /* Ensure title is visible in light mode */
 }
 
 .arcade-game h3::after,
@@ -2989,4 +3053,199 @@ body:has(.practice-mode-overlay) {
 
 .expanded-button.expanded-back {
   margin-left: auto;
+}
+
+/* Styles for the Aye! and Belay My Last buttons */
+.confirm-button {
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  min-width: 100px;
+  text-align: center;
+  background-color: #3498db; /* Solid blue */
+  border: none;
+  color: white;
+  font-weight: bold;
+}
+
+.confirm-button:hover {
+  background-color: #2980b9; /* Darker blue on hover */
+  transform: translateY(-2px);
+}
+
+.cancel-button {
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  min-width: 100px;
+  text-align: center;
+  background-color: #e74c3c; /* Solid red */
+  border: none;
+  color: white;
+  font-weight: bold;
+}
+
+.cancel-button:hover {
+  background-color: #c0392b; /* Darker red on hover */
+  transform: translateY(-2px);
+}
+
+/* Add pulsate animation for the token message */
+.pulsate {
+  animation: messagePulsate 2s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@keyframes messagePulsate {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+/* Add warning message style */
+.arcade-warning-message {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 1rem 1.5rem;
+  background-color: #d32f2f;
+  border-radius: 18px;
+  font-size: 0.9rem;
+  max-width: 300px;
+  text-align: center;
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 100;
+  transition: transform 0.3s ease-in-out;
+}
+
+/* Add light mode specific styling for token counter */
+.light .token-counter {
+  color: black !important; /* Use black for light mode with !important to override */
+}
+
+/* Add styles for counter container to hold both counters */
+.counter-container {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Add styles for question counter */
+.question-counter {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  background-color: var(--background-darker);
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 1.2rem;
+  color: white !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.counter-label {
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+/* Add style for question progress on main screen */
+.question-progress {
+  color: #FFD700 !important;
+  font-size: 1rem;
+}
+
+/* Update token counter style to work in the container */
+.token-counter {
+  position: relative; /* Change from absolute to relative for container positioning */
+}
+
+/* Add styles for disabled token counter */
+.token-counter.disabled {
+  opacity: 0.5;
+  filter: grayscale(1);
+}
+
+/* Main token counter for arcade on main screen */
+.main-token-counter {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: none;
+  padding: 0.3rem 0;
+  font-weight: bold;
+  font-size: 1rem;
+  color: var(--text-primary);
+  margin-bottom: 5px;
+}
+
+.main-token-counter .token-counter-icon {
+  width: 18px;
+  height: 18px;
+}
+
+/* Arcade counter styles */
+.arcade-counter {
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: bold;
+  margin-top: 0.25rem;
+  padding: 4px 0;
+  background: none;
+}
+
+.arcade-counter.study-break {
+  color: var(--primary-color);
+  font-size: 1.2rem;
+  text-shadow: 0 0 5px rgba(var(--primary-rgb), 0.5);
+  animation: pulse 1.5s infinite alternate;
+  margin-top: 0.25rem;
+  background: none;
+}
+
+/* Light mode styling for counters */
+.light .arcade-counter {
+  color: var(--text-primary);
+}
+
+.light .arcade-counter.study-break {
+  color: var(--primary-color);
+}
+
+/* Question counter progress */
+.question-progress {
+  color: #FFD700;
+  font-size: 1rem;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.1);
+  }
+}
+
+/* Greyed out games */
+.arcade-game-coming-soon.greyed-out {
+  opacity: 0.6;
+  filter: grayscale(0.8);
+  pointer-events: auto;
+  cursor: not-allowed;
+}
+
+.arcade-game-coming-soon.greyed-out:hover {
+  transform: none;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  border-color: transparent;
 }

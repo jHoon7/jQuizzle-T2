@@ -8,15 +8,90 @@ import azithroTopIcon from '../assets/azithro-top-icon.svg';
 import SMutansGame from './SMutansGame';
 
 const ArcadeScreen = ({ onClose }) => {
-  const [showTokenModal, setShowTokenModal] = useState(true);
-  const [tokenCount, setTokenCount] = useState(5); // Initialize with 5 tokens
+  // Check if this is the first arcade visit
+  const [showTokenModal, setShowTokenModal] = useState(() => {
+    return localStorage.getItem('hasVisitedArcade') !== 'true';
+  });
+  
+  // Initialize token count from localStorage or default to 5 if first visit
+  const [tokenCount, setTokenCount] = useState(() => {
+    if (localStorage.getItem('hasVisitedArcade') !== 'true') {
+      return 5; // First time visitors get 5 tokens
+    } else {
+      return parseInt(localStorage.getItem('arcadeTokens') || '0');
+    }
+  });
+  
+  // Initialize the question/card counter
+  const [questionCounter, setQuestionCounter] = useState(() => {
+    return parseInt(localStorage.getItem('arcadeQuestionCounter') || '0');
+  });
+  
+  // Add state for warning message
+  const [showWarning, setShowWarning] = useState(false);
+  const [warningTimeout, setWarningTimeout] = useState(null);
+  
+  // Add state to track hovering over token counter
+  const [isHoveringTokenCounter, setIsHoveringTokenCounter] = useState(false);
+  
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [selectedGame, setSelectedGame] = useState(null);
   const [hoveredGame, setHoveredGame] = useState(null);
   const [activeGame, setActiveGame] = useState(null);
   
+  // Add a new state for the coming soon message
+  const [showComingSoonMessage, setShowComingSoonMessage] = useState(false);
+  const [comingSoonTimeout, setComingSoonTimeout] = useState(null);
+  
+  // Update localStorage when tokens or counter changes
+  useEffect(() => {
+    localStorage.setItem('arcadeTokens', tokenCount.toString());
+  }, [tokenCount]);
+  
+  useEffect(() => {
+    localStorage.setItem('arcadeQuestionCounter', questionCounter.toString());
+  }, [questionCounter]);
+  
+  // Clear warning timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (warningTimeout) {
+        clearTimeout(warningTimeout);
+      }
+    };
+  }, [warningTimeout]);
+  
+  // Add useEffect to clear comingSoon timeout
+  useEffect(() => {
+    return () => {
+      if (comingSoonTimeout) {
+        clearTimeout(comingSoonTimeout);
+      }
+    };
+  }, [comingSoonTimeout]);
+  
   const handleTokenModalClose = () => {
     setShowTokenModal(false);
+    // Mark that the user has visited the arcade
+    localStorage.setItem('hasVisitedArcade', 'true');
+  };
+  
+  // Add a new handler for coming soon games
+  const handleComingSoonClick = () => {
+    // Show coming soon message
+    setShowComingSoonMessage(true);
+    
+    // Clear any existing timeout
+    if (comingSoonTimeout) {
+      clearTimeout(comingSoonTimeout);
+    }
+    
+    // Auto-hide the message after 3 seconds
+    const timeout = setTimeout(() => {
+      setShowComingSoonMessage(false);
+    }, 3000);
+    
+    setComingSoonTimeout(timeout);
   };
   
   const handleGameClick = (gameName) => {
@@ -24,7 +99,20 @@ const ArcadeScreen = ({ onClose }) => {
       setSelectedGame(gameName);
       setShowConfirmation(true);
     } else {
-      alert("You don't have any tokens left! Come back after studying more.");
+      // Show internal warning message instead of alert
+      setShowWarning(true);
+      
+      // Clear any existing timeout
+      if (warningTimeout) {
+        clearTimeout(warningTimeout);
+      }
+      
+      // Auto-hide the warning after 3 seconds
+      const timeout = setTimeout(() => {
+        setShowWarning(false);
+      }, 3000);
+      
+      setWarningTimeout(timeout);
     }
   };
   
@@ -48,7 +136,11 @@ const ArcadeScreen = ({ onClose }) => {
   const renderGame = () => {
     switch (activeGame) {
       case "S. mutans":
-        return <SMutansGame onClose={handleGameClose} />;
+        return <SMutansGame 
+          onClose={handleGameClose} 
+          tokenCount={tokenCount} 
+          onTokenUse={(amount = 1) => setTokenCount(prevCount => prevCount - amount)} 
+        />;
       case "C-Factor":
         return <div className="game-placeholder">C-Factor game coming soon!</div>;
       case "Azithro":
@@ -98,10 +190,34 @@ const ArcadeScreen = ({ onClose }) => {
             </div>
           )}
           
-          <div className="token-counter">
-            <span>{tokenCount}</span>
-            <img src={coinIcon} alt="Token" className="token-counter-icon" />
+          <div className="counter-container">
+            <div 
+              className={`token-counter ${tokenCount === 0 ? 'disabled' : ''}`}
+              onMouseEnter={() => setIsHoveringTokenCounter(true)}
+              onMouseLeave={() => setIsHoveringTokenCounter(false)}
+            >
+              <span>{tokenCount}</span>
+              <img src={coinIcon} alt="Token" className="token-counter-icon" />
+            </div>
           </div>
+          
+          {tokenCount === 0 && isHoveringTokenCounter && (
+            <div className="token-counter-message pulsate">
+              Complete more questions/cards to earn more tokens!
+            </div>
+          )}
+          
+          {showWarning && (
+            <div className="arcade-warning-message pulsate">
+              You don't have any tokens left! Complete more questions/cards to earn tokens.
+            </div>
+          )}
+          
+          {showComingSoonMessage && (
+            <div className="arcade-warning-message pulsate">
+              This game is coming soon! Check back later for updates.
+            </div>
+          )}
           
           <h2>Game Galley</h2>
           <p>You've earned a study break! Each play will cost you 1 hard earned token!</p>
@@ -127,8 +243,8 @@ const ArcadeScreen = ({ onClose }) => {
             </div>
             
             <div 
-              className="arcade-game-coming-soon" 
-              onClick={() => handleGameClick("C-Factor")}
+              className="arcade-game-coming-soon greyed-out" 
+              onClick={handleComingSoonClick}
               onMouseEnter={() => setHoveredGame("C-Factor")}
               onMouseLeave={() => setHoveredGame(null)}
             >
@@ -146,8 +262,8 @@ const ArcadeScreen = ({ onClose }) => {
             </div>
             
             <div 
-              className="arcade-game-coming-soon" 
-              onClick={() => handleGameClick("Azithro")}
+              className="arcade-game-coming-soon greyed-out" 
+              onClick={handleComingSoonClick}
               onMouseEnter={() => setHoveredGame("Azithro")}
               onMouseLeave={() => setHoveredGame(null)}
             >

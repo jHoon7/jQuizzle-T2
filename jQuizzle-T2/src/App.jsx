@@ -8,6 +8,7 @@ import FlashcardRunner from './components/FlashcardRunner'
 import PracticeModeRunner from './components/PracticeModeRunner'
 import ArcadeScreen from './components/ArcadeScreen'
 import { Analytics } from "@vercel/analytics/react"
+import coinIcon from './assets/coin-icon.svg'
 
 // Move ConfirmationModal outside of App component
 const ConfirmationModal = ({ onConfirm, onCancel, onDiscard }) => {
@@ -235,8 +236,14 @@ function App() {
   const [message, setMessage] = useState("Click Me to Get Smarter!")
   const [isMessageFading, setIsMessageFading] = useState(false)
   const [isMessageChanging, setIsMessageChanging] = useState(false)
-  const [quizBanks, setQuizBanks] = useState([])
-  const [flashcardDecks, setFlashcardDecks] = useState([])
+  const [quizBanks, setQuizBanks] = useState(() => {
+    const savedQuizBanks = localStorage.getItem('quizBanks');
+    return savedQuizBanks ? JSON.parse(savedQuizBanks) : [];
+  })
+  const [flashcardDecks, setFlashcardDecks] = useState(() => {
+    const savedFlashcardDecks = localStorage.getItem('flashcardDecks');
+    return savedFlashcardDecks ? JSON.parse(savedFlashcardDecks) : [];
+  })
   const [isDraggingOver, setIsDraggingOver] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(true)
   const [itemName, setItemName] = useState('')
@@ -290,18 +297,32 @@ function App() {
   const [isPracticeModeEnabled, setIsPracticeModeEnabled] = useState(false)
   const [showPracticeModeRunner, setShowPracticeModeRunner] = useState(false)
   // Add new state for arcade feature
-  /* ==========================================
-  FEATURE_DISABLED: ARCADE_COUNTER
-  Temporarily setting to 100 to bypass completion threshold requirement.
-  This is part of the arcade feature set that's currently disabled.
-  TODO: Reset to 0 for production/release to enforce completion requirement when re-enabling arcade features.
-  ========================================== */
-  const [completionCount, setCompletionCount] = useState(100)
+  const [completionCount, setCompletionCount] = useState(0)
   const [showArcade, setShowArcade] = useState(false)
   // Add a new state for the arcade message
   const [showArcadeMessage, setShowArcadeMessage] = useState(false);
   // Add new state for flashcard starting side
   const [flashcardStartSide, setFlashcardStartSide] = useState('A');
+
+  // Add initialization to reset localStorage arcade values
+  useEffect(() => {
+    // Reset arcade-related localStorage values to ensure a clean start when completionCount is reset to 0
+    if (completionCount === 0) {
+      localStorage.removeItem('hasVisitedArcade');
+      localStorage.removeItem('arcadeTokens');
+      localStorage.removeItem('arcadeQuestionCounter');
+    }
+  }, []);  // Empty dependency array ensures this only runs once on component mount
+
+  // Add useEffect to save quizBanks to localStorage when they change
+  useEffect(() => {
+    localStorage.setItem('quizBanks', JSON.stringify(quizBanks));
+  }, [quizBanks]);
+
+  // Add useEffect to save flashcardDecks to localStorage when they change
+  useEffect(() => {
+    localStorage.setItem('flashcardDecks', JSON.stringify(flashcardDecks));
+  }, [flashcardDecks]);
 
   const handleCreateOption = (type) => {
     setCreateType(type)
@@ -1698,6 +1719,16 @@ function App() {
   // Add a handler for arcade button click
   const handleArcadeClick = () => {
     if (completionCount >= 100) {
+      // Check if this is first time accessing arcade or if the user had tokens but used them all
+      const hasVisitedArcade = localStorage.getItem('hasVisitedArcade') === 'true';
+      const currentTokens = parseInt(localStorage.getItem('arcadeTokens') || '0');
+      
+      // If the user has visited before and has 0 tokens, reset the question counter
+      // This ensures their next 20 questions will earn them a new token
+      if (hasVisitedArcade && currentTokens === 0) {
+        localStorage.setItem('arcadeQuestionCounter', '0');
+      }
+      
       // Show the arcade screen directly without celebration animation
       setShowArcade(true);
     } else {
@@ -2001,6 +2032,29 @@ function App() {
 
   // Make checkContentChanges available globally
   window.checkContentChanges = checkContentChanges;
+
+  // Add a common function to handle question completion
+  const handleQuestionCompletion = () => {
+    // Increment completion count
+    setCompletionCount(prev => prev + 1);
+    
+    // Get current question counter and token count
+    const currentQuestionCounter = parseInt(localStorage.getItem('arcadeQuestionCounter') || '0');
+    const currentTokens = parseInt(localStorage.getItem('arcadeTokens') || '0');
+    
+    // Increment the question counter
+    const newQuestionCounter = currentQuestionCounter + 1;
+    
+    // Check if we've reached 20 questions
+    if (newQuestionCounter >= 20) {
+      // Reset counter and add a token
+      localStorage.setItem('arcadeQuestionCounter', '0');
+      localStorage.setItem('arcadeTokens', (currentTokens + 1).toString());
+    } else {
+      // Just update the counter
+      localStorage.setItem('arcadeQuestionCounter', newQuestionCounter.toString());
+    }
+  };
 
   return (
     <div className={`container ${isDarkMode ? 'dark' : 'light'}`} data-mode={mode}>
@@ -2344,7 +2398,7 @@ function App() {
                 rel="noopener noreferrer" 
                 className="version-number"
               >
-                v2.8
+                v3.0
               </a>
             </>
           )}
@@ -2758,30 +2812,44 @@ function App() {
       </div>
 
       {/* Add arcade container above top-gum-container */}
-      {/* 
-      ==========================================
-      FEATURE_DISABLED: ARCADE_BUTTON
-      Temporarily commenting out arcade button UI while other features are being updated.
-      TODO: Re-enable this feature once arcade functionality is stabilized.
-      This block contains the arcade button, counter, and message bubble.
-      ==========================================
       <div className="arcade-container">
+        {/* Add token counter above arcade logo - only show after first visit */}
+        {completionCount >= 100 && localStorage.getItem('hasVisitedArcade') === 'true' && (
+          <div className="main-token-counter">
+            <span>{parseInt(localStorage.getItem('arcadeTokens') || '0')}</span>
+            <img 
+              src={coinIcon} 
+              alt="Token" 
+              className="token-counter-icon" 
+            />
+          </div>
+        )}
+        
         <img 
           src={arcadeLogo} 
           className={`arcade-logo ${completionCount >= 100 ? '' : 'disabled'}`}
           alt="Arcade"
           onClick={handleArcadeClick}
         />
+        
         {completionCount >= 100 ? (
-          <span className="arcade-counter study-break">Study Break!</span>
+          // Check if this is after initial tokens have been used up
+          localStorage.getItem('hasVisitedArcade') === 'true' ? (
+            // Show counter instead of "Study Break!"
+            <span className="arcade-counter question-progress">
+              {parseInt(localStorage.getItem('arcadeQuestionCounter') || '0')}/20
+            </span>
+          ) : (
+            <span className="arcade-counter study-break">Study Break!</span>
+          )
         ) : (
           <span className="arcade-counter">{completionCount}/100</span>
         )}
+        
         <div className={`arcade-message-bubble ${showArcadeMessage ? 'show' : ''}`}>
           Complete 100 Questions or Flashcards to earn a study break!
         </div>
       </div>
-      */}
 
       <div className="top-gum-container">
         <img src={topGumLogo} className="top-gum-logo" alt="Top Gum Logo" />
@@ -2816,7 +2884,7 @@ function App() {
               onClose={() => setShowQuizRunner(false)}
               isDarkMode={isDarkMode}
               onThemeToggle={toggleTheme}
-              onItemComplete={() => setCompletionCount(prev => prev + 1)}
+              onItemComplete={handleQuestionCompletion}
             />
           </ErrorBoundary>
         </div>
@@ -2837,15 +2905,17 @@ function App() {
 
       {isFlashcardRunnerActive && currentFlashcardDeck && (
         <div className="flashcard-runner-overlay">
-          <FlashcardRunner 
-            cards={currentFlashcardDeck.cards}
-            deckName={currentFlashcardDeck.name}
-            startSide={currentFlashcardDeck.startSide}
-            onClose={handleCloseFlashcardRunner}
-            isDarkMode={isDarkMode}
-            onThemeToggle={toggleTheme}
-            onItemComplete={() => setCompletionCount(prev => prev + 1)}
-          />
+          <ErrorBoundary onClose={handleCloseFlashcardRunner}>
+            <FlashcardRunner
+              cards={currentFlashcardDeck.cards}
+              deckName={currentFlashcardDeck.name}
+              onClose={handleCloseFlashcardRunner}
+              isDarkMode={isDarkMode}
+              onThemeToggle={toggleTheme}
+              onItemComplete={handleQuestionCompletion}
+              startSide={currentFlashcardDeck.startSide || 'A'}
+            />
+          </ErrorBoundary>
         </div>
       )}
 
@@ -2858,23 +2928,17 @@ function App() {
             onClose={handleClosePracticeModeRunner}
             isDarkMode={isDarkMode}
             onThemeToggle={toggleTheme}
-            onItemComplete={() => setCompletionCount(prev => prev + 1)}
+            onItemComplete={handleQuestionCompletion}
           />
         </div>
       )}
 
       {/* Add Arcade Screen */}
-      {/* ==========================================
-      FEATURE_DISABLED: ARCADE_SCREEN
-      Temporarily hiding arcade screen while other features are being updated.
-      This matches the ARCADE_BUTTON feature that has been disabled above.
-      TODO: Re-enable once arcade functionality is stabilized.
-      ========================================== */}
-      {/* {showArcade && (
+      {showArcade && (
         <div className="arcade-overlay">
           <ArcadeScreen onClose={() => setShowArcade(false)} />
         </div>
-      )} */}
+      )}
 	  
 		<Analytics />
     </div>
