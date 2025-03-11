@@ -3232,3 +3232,23 @@ body:has(.practice-mode-overlay) {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   border-color: transparent;
 }
+
+/* Buy Me a Coffee Widget Styling */
+#bmc-wbtn {
+  position: fixed !important;
+  bottom: 1.5rem !important;
+  z-index: 999 !important;
+  transform: scale(0.5) !important;
+  transition: transform 0.3s ease !important;
+}
+
+#bmc-wbtn:hover {
+  transform: scale(0.60) !important;
+}
+
+.container[data-mode="create"] #bmc-wbtn,
+body:has(.flashcard-runner-overlay) #bmc-wbtn,
+body:has(.practice-mode-overlay) #bmc-wbtn,
+body:has(.arcade-overlay) #bmc-wbtn {
+  display: none !important;
+}
