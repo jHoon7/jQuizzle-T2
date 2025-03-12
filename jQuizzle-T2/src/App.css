@@ -509,7 +509,7 @@ p {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0;
   width: 160px;
   opacity: 1;
   transition: opacity 0.3s ease;
@@ -541,6 +541,7 @@ p {
   font-weight: bold;
   text-shadow: 0 0 5px rgba(100, 181, 246, 0.5);
   white-space: nowrap;
+  margin-top: -1.3rem; /* Added negative margin to pull text up */
 }
 
 .main-content {
