@@ -303,6 +303,8 @@ function App() {
   const [showArcadeMessage, setShowArcadeMessage] = useState(false);
   // Add new state for flashcard starting side
   const [flashcardStartSide, setFlashcardStartSide] = useState('A');
+  // Add new state for storage warning
+  const [showStorageWarningModal, setShowStorageWarningModal] = useState(false);
 
   // Add initialization to reset localStorage arcade values
   useEffect(() => {
@@ -316,13 +318,70 @@ function App() {
 
   // Add useEffect to save quizBanks to localStorage when they change
   useEffect(() => {
-    localStorage.setItem('quizBanks', JSON.stringify(quizBanks));
+    try {
+      const quizBanksString = JSON.stringify(quizBanks);
+      // Check if we can safely store this data
+      if (canSafelyStoreInLocalStorage(quizBanksString, 'quizBanks')) {
+        localStorage.setItem('quizBanks', quizBanksString);
+      } else {
+        console.warn('Quiz banks exceed localStorage capacity, some data may not be persisted');
+        // Optional: Show a user warning
+        showStorageWarning();
+      }
+    } catch (error) {
+      console.error('Error saving quizBanks to localStorage:', error);
+    }
   }, [quizBanks]);
 
   // Add useEffect to save flashcardDecks to localStorage when they change
   useEffect(() => {
-    localStorage.setItem('flashcardDecks', JSON.stringify(flashcardDecks));
+    try {
+      const flashcardDecksString = JSON.stringify(flashcardDecks);
+      // Check if we can safely store this data
+      if (canSafelyStoreInLocalStorage(flashcardDecksString, 'flashcardDecks')) {
+        localStorage.setItem('flashcardDecks', flashcardDecksString);
+      } else {
+        console.warn('Flashcard decks exceed localStorage capacity, some data may not be persisted');
+        // Optional: Show a user warning
+        showStorageWarning();
+      }
+    } catch (error) {
+      console.error('Error saving flashcardDecks to localStorage:', error);
+    }
   }, [flashcardDecks]);
+
+  // Helper function to check if data can be safely stored in localStorage
+  const canSafelyStoreInLocalStorage = (dataString, key) => {
+    try {
+      // Get the approximate size of the data in bytes
+      const dataSize = new Blob([dataString]).size;
+      
+      // Estimate available space (5MB is typical localStorage limit)
+      const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+      
+      // Get current usage (approximation)
+      let currentUsage = 0;
+      for (let i = 0; i < localStorage.length; i++) {
+        const storageKey = localStorage.key(i);
+        if (storageKey !== key) { // Skip the key we're about to update
+          const value = localStorage.getItem(storageKey);
+          currentUsage += new Blob([storageKey]).size + new Blob([value]).size;
+        }
+      }
+      
+      // Check if we have enough space
+      return (currentUsage + dataSize) < maxSize;
+    } catch (e) {
+      console.error('Error checking localStorage capacity:', e);
+      return false; // Be cautious if there's an error
+    }
+  };
+
+  // Function to show storage warning
+  const showStorageWarning = () => {
+    setShowStorageWarningModal(true);
+    setTimeout(() => setShowStorageWarningModal(false), 5000);
+  };
 
   const handleCreateOption = (type) => {
     setCreateType(type)
@@ -2398,7 +2457,7 @@ function App() {
                 rel="noopener noreferrer" 
                 className="version-number"
               >
-                v3.1
+                v3.2
               </a>
             </>
           )}
@@ -2941,6 +3000,11 @@ function App() {
       )}
 	  
 		<Analytics />
+      {showStorageWarningModal && (
+        <div className="storage-warning-modal">
+          <p>Storage capacity exceeded!</p>
+        </div>
+      )}
     </div>
   )
 }
